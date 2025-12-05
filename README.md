@@ -129,17 +129,6 @@ create_watershed_map(
 - `zero_q_freq`
 - `hfd_mean`, `half_flow_date_std`
 
-## Requirements
-
-- Python >=3.8
-- numpy, pandas, geopandas
-- xarray, rioxarray, rasterio
-- pynhd, py3dep, pygridmet, pygeohydro
-- pygeoglim, planetary-computer
-- scipy, matplotlib
-
-See `pyproject.toml` for complete dependency list.
-
 ## Data Sources
 
 - **Watershed boundaries**: USGS NLDI
