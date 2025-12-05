@@ -54,15 +54,11 @@ def delineate_watershed(gauge_id):
         gauge_lon = float(row["dec_long_va"])
         gauge_name = row["station_nm"]
         
-        huc_full = str(row.get("huc_cd", ""))
-        huc_02 = huc_full[:2] if len(huc_full) >= 2 else "NA"
-        
         metadata = {
             "gauge_id": str(gauge_id),
             "gauge_name": gauge_name,
             "gauge_lat": gauge_lat,
             "gauge_lon": gauge_lon,
-            "huc_02": huc_02,
             "geometry": watershed_geom
         }
         

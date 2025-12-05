@@ -166,11 +166,6 @@ example_output.csv
 multiple_gauges.csv
 
 # Test and development files
-test_*.py
-*_test.py
-tests/
-test_*.ipynb
-*_test.ipynb
 temp_*.py
 temp_*.ipynb
 example_usage.py
