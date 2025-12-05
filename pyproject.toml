@@ -7,8 +7,7 @@ name = "camels-attrs"
 version = "1.0.2"
 description = "Extract CAMELS-like catchment attributes for any USGS gauge site in the USA"
 readme = "README.md"
-requires-python = ">=3.8"
-license = {text = "MIT"}
+requires-python = ">=3.10"license = {text = "MIT"}
 authors = [
     {name = "Mohammad Galib", email = "mgalib@purdue.edu"}
 ]
