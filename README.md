@@ -1,40 +1,22 @@
 # CAMELS Attrs
+
 ![CAMELS Attrs](assets/thumbnail.png)
+
 [![PyPI version](https://badge.fury.io/py/camels-attrs.svg)](https://pypi.org/project/camels-attrs/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Downloads](https://static.pepy.tech/badge/camels-attrs)](https://pepy.tech/project/camels-attrs)
+[![CI](https://github.com/galib9690/camels-attrs/actions/workflows/ci.yml/badge.svg)](https://github.com/galib9690/camels-attrs/actions/workflows/ci.yml)
 
-A Python package for extracting CAMELS-like catchment attributes for any USGS gauge site in the United States.
+A Python package for extracting CAMELS-like catchment attributes and hydrometeorological timeseries for any USGS gauge in the United States.
 
-## Overview
+## Key Capabilities
 
-This package provides a simple, reproducible way to extract comprehensive catchment attributes following the CAMELS (Catchment Attributes and Meteorology for Large-sample Studies) methodology. It automates the extraction of topographic, climatic, soil, vegetation, geological, and hydrological characteristics for any USGS-monitored watershed.
-
-Additionally, it can fetch daily hydrometeorological forcing data (precipitation, temperature, solar radiation, wind speed, humidity) from the GridMET dataset for user-defined date ranges. The package also includes a new feature to create a comprehensive multi-panel watershed map that visualizes key attributes and spatial context.
-
-## Features
-
-### Static Catchment Attributes
-
-- **Watershed Delineation**: Automated watershed boundary extraction using NLDI
-- **Topographic Attributes**: Elevation, slope, and drainage area from 3DEP DEM
-- **Climate Indices**: Precipitation, temperature, aridity, seasonality from GridMET
-- **Soil Characteristics**: Texture, porosity, conductivity from gNATSGO and POLARIS
-- **Vegetation Metrics**: LAI, NDVI/GVF, land cover from MODIS and NLCD
-- **Geological Properties**: Lithology and permeability from GLiM and GLHYMPS
-- **Hydrological Signatures**: Flow statistics, baseflow index, event characteristics
-
-### Hydrometeorological Timeseries Data
-
-- **Daily Forcing Data**: Precipitation, temperature (min/max/avg), solar radiation, wind speed, humidity
-- **PET Calculations**: GridMET PET and Hargreaves-Samani PET
-- **Custom Date Ranges**: Fetch data for any USGS gauge and time period
-- **Quality Control**: Automatic handling of missing data
-
-### Watershed Visualization
-
-- **Multi-Panel Map Creation**: Comprehensive watershed maps with USGS gauge location, elevation, land cover, soil characteristics, and streamflow data
-- **Publication-Ready Figures**: High-quality plots with proper legends and coordinate reference systems
+- **Automated Attribute Extraction**: Extract 60+ catchment attributes following CAMELS methodology
+- **Watershed Delineation**: Automatic watershed boundary extraction for any USGS gauge
+- **Timeseries Data**: Fetch daily hydrometeorological forcing data (precipitation, temperature, PET, etc.)
+- **Batch Processing**: Process multiple gauges simultaneously
+- **Visualization**: Create publication-ready watershed maps
+- **CLI & Python API**: Use via command-line or integrate into Python workflows
 
 ## Installation
 
@@ -44,131 +26,144 @@ pip install camels-attrs
 
 ## Quick Start
 
-### Extract Static Attributes
+### Command Line
 
-```python
-from camels_attrs import extract_static_attrs
+```bash
+# Extract all attributes for a gauge
+camels-extract 01031500 -o attributes.csv
 
-# Extract attributes for a USGS gauge
-result = extract_static_attrs(
-    usgs_id='01013500',
-    output_dir='output'
-)
+# Extract multiple gauges
+camels-extract 01031500 02177000 06803530 -o combined.csv
+
+# Include timeseries data
+camels-extract 01031500 --timeseries -o data.csv
+
+# Custom date ranges
+camels-extract 01031500 --climate-start 2010-01-01 --climate-end 2020-12-31
 ```
 
-### Get Forcing Data
+### Python API
 
 ```python
-from camels_attrs import extract_forcing_data
+from camels_attrs import CamelsExtractor
 
-# Fetch daily forcing data
-forcing = extract_forcing_data(
-    usgs_id='01013500',
+# Single gauge extraction
+extractor = CamelsExtractor('01031500')
+attributes = extractor.extract_all()
+
+# Save to file
+extractor.save('attributes.csv')
+
+# Extract timeseries
+forcing_data = extractor.extract_timeseries(
     start_date='2010-01-01',
     end_date='2020-12-31'
 )
-```
 
-### Create Watershed Map
+# Create watershed map
+extractor.create_comprehensive_map(save_path='watershed_map.png')
+```
 
 ```python
-from camels_attrs import create_watershed_map
+from camels_attrs import extract_multiple_gauges
 
-# Create a comprehensive watershed map
-create_watershed_map(
-    usgs_id='01013500',
-    output_file='watershed_map.png'
+# Batch processing
+gauge_list = ['01031500', '02177000', '06803530']
+df = extract_multiple_gauges(
+    gauge_list,
+    climate_start='2010-01-01',
+    climate_end='2020-12-31'
 )
+df.to_csv('batch_attributes.csv')
 ```
 
-## Extracted Attributes
+## Extracted Attributes (60+)
 
-### Topographic (16 attributes)
+| Category | Count | Examples |
+|----------|-------|----------|
+| **Topographic** | 7 | Elevation statistics, slope, drainage area |
+| **Climate** | 13 | Precipitation, temperature, aridity, seasonality, extremes |
+| **Soil** | 9 | Texture, depth, porosity, conductivity, water content |
+| **Vegetation** | 13 | LAI, NDVI/GVF, land cover fractions, root depth |
+| **Geological** | 7 | Lithology fractions, porosity, permeability |
+| **Hydrological** | 17 | Flow statistics, baseflow, runoff ratio, event characteristics |
 
-- `gauge_lat`, `gauge_lon`
-- `elev_mean`, `elev_min`, `elev_max`
-- `slope_mean`, `area_gages2`
-- Aspect statistics (N, E, S, W)
+<details>
+<summary>View complete attribute list</summary>
 
-### Climate (18 attributes)
+### Topographic
+`gauge_lat`, `gauge_lon`, `elev_mean`, `elev_min`, `elev_max`, `slope_mean`, `area_gages2`, aspect statistics
 
-- `p_mean`, `pet_mean`, `aridity`
-- `p_seasonality`, `frac_snow`
-- Temperature statistics
-- `high_prec_freq`, `high_prec_dur`
-- `low_prec_freq`, `low_prec_dur`
+### Climate  
+`p_mean`, `pet_mean`, `aridity`, `p_seasonality`, `frac_snow`, temperature statistics, `high_prec_freq`, `high_prec_dur`, `low_prec_freq`, `low_prec_dur`
 
-### Soil (24 attributes)
+### Soil
+Sand/silt/clay fractions, `soil_depth_pelletier`, `soil_depth_statsgo`, `soil_porosity`, `soil_conductivity`, water content, bulk density, organic carbon
 
-- Texture fractions (sand, silt, clay)
-- `soil_depth_pelletier`, `soil_depth_statsgo`
-- `soil_porosity`, `soil_conductivity`
-- Water content characteristics
-- Bulk density, organic carbon
+### Vegetation
+`lai_max`, `lai_diff`, `gvf_max`, `gvf_diff`, `ndvi_max`, `ndvi_diff`, land cover fractions, `dom_land_cover`, `dom_land_cover_frac`
 
-### Vegetation (15 attributes)
+### Geology
+Lithology fractions (siliciclastic, carbonate, etc.), `geol_porosity`, `geol_permeability`
 
-- `lai_max`, `lai_diff`
-- `gvf_max`, `gvf_diff`
-- `ndvi_max`, `ndvi_diff`
-- Land cover fractions (forest, shrub, grass, wetland, etc.)
-- `dom_land_cover`, `dom_land_cover_frac`
+### Hydrology
+`q_mean`, `runoff_ratio`, `baseflow_index`, `stream_elas`, `slope_fdc`, `flow_variability`, `high_q_freq`, `high_q_dur`, `low_q_freq`, `low_q_dur`, `zero_q_freq`, `hfd_mean`, `half_flow_date_std`
 
-### Geology (6 attributes)
-
-- Lithology fractions (siliciclastic, carbonate, etc.)
-- `geol_porosity`, `geol_permeability`
-
-### Hydrology (15 attributes)
-
-- `q_mean`, `runoff_ratio`
-- `baseflow_index`, `stream_elas`
-- `slope_fdc`, `flow_variability`
-- `high_q_freq`, `high_q_dur`
-- `low_q_freq`, `low_q_dur`
-- `zero_q_freq`
-- `hfd_mean`, `half_flow_date_std`
+</details>
 
 ## Data Sources
 
-- **Watershed boundaries**: USGS NLDI
-- **Topography**: USGS 3DEP
-- **Climate**: GridMET
-- **Soil**: gNATSGO, POLARIS
-- **Vegetation**: MODIS (LAI, NDVI), NLCD
-- **Geology**: GLiM, GLHYMPS
-- **Streamflow**: USGS NWIS
+| Data Type | Source | Resolution |
+|-----------|--------|------------|
+| Watershed Boundaries | USGS NLDI | Vector |
+| Topography | USGS 3DEP | 10m-30m DEM |
+| Climate | GridMET | 4km daily |
+| Soil | gNATSGO, POLARIS | 30m-90m |
+| Vegetation | MODIS, NLCD | 250m-30m |
+| Geology | GLiM, GLHYMPS | Vector |
+| Streamflow | USGS NWIS | Daily |
 
-## References
+## Development
 
-This package implements the methodology described in:
+```bash
+# Install with dev dependencies
+pip install -e ".[dev]"
 
-- Newman et al. (2015). Development of a large-sample watershed-scale hydrometeorological dataset. NCAR Technical Note
-- Addor et al. (2017). The CAMELS data set: catchment attributes and meteorology for large-sample studies. Hydrology and Earth System Sciences
+# Run tests
+pytest tests/
 
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-MIT License - see LICENSE file for details.
+# With coverage
+pytest tests/ --cov=camels_attrs
+```
 
 ## Citation
 
 If you use this package in your research, please cite:
 
-```
-Galib, M., & Merwade, V. (2025). camels-attrs: A Python Package for Extracting CAMELS-like Catchment Attributes (v1.0.1). Zenodo. https://doi.org/10.5281/zenodo.17315038
+```bibtex
+Galib, M., & Merwade, V. (2025). camels-attrs: A Python Package for Extracting 
+CAMELS-like Catchment Attributes (v1.0.2). Zenodo. 
+https://doi.org/10.5281/zenodo.17315038
 ```
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17315038.svg)](https://doi.org/10.5281/zenodo.17315038)
+
+## References
+
+- Newman et al. (2015). Development of a large-sample watershed-scale hydrometeorological dataset. NCAR Technical Note
+- Addor et al. (2017). The CAMELS data set: catchment attributes and meteorology for large-sample studies. Hydrology and Earth System Sciences, 21, 5293-5313
+
+## Contributing
+
+Contributions are welcome! Please submit a Pull Request or open an Issue.
+
+## License
+
+MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Contact
 
 Mohammad Galib - mgalib@purdue.edu  
 Venkatesh Merwade - vmerwade@purdue.edu
 
-## Acknowledgments
-
-We acknowledge the support and resources provided by Purdue University and the hydrological research community.
+Purdue University

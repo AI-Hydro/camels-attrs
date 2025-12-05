@@ -6,6 +6,7 @@ import argparse
 import sys
 from .extractor import CamelsExtractor, extract_multiple_gauges
 from .timeseries import get_monthly_summary, calculate_water_balance
+from . import __version__
 
 
 def main():
@@ -99,7 +100,7 @@ Examples:
     parser.add_argument(
         "--version",
         action="version",
-        version="%(prog)s 0.1.0"
+        version=f"%(prog)s {__version__}"
     )
     
     args = parser.parse_args()
