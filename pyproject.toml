@@ -52,6 +52,7 @@ dependencies = [
     "cartopy>=0.20.0",
     "earthengine-api",
     "pygeoglim>=1.0.5",
+        "dask>=2021.0.0",
 ]
 
 [project.optional-dependencies]
