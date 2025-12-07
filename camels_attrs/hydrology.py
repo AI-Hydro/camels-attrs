@@ -7,6 +7,7 @@ import pandas as pd
 import hydrofunctions as hf
 import pygridmet as gridmet
 import geopandas as gpd
+from typing import Optional
 
 # ------------------------------
 # Utility Functions (From Reference)
@@ -247,7 +248,7 @@ def extract_hydrological_signatures(
 # Data Fetchers (Wrappers)
 # ------------------------------
 
-def fetch_streamflow_data(gauge_id: str, start_date: str, end_date: str) -> pd.Series | None:
+def fetch_streamflow_data(gauge_id: str, start_date: str, end_date: str) -> Optional[pd.Series]:
     """Fetch daily streamflow from USGS NWIS."""
     try:
         nwis = hf.NWIS(gauge_id, "dv", start_date, end_date)
