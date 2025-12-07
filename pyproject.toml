@@ -39,6 +39,7 @@ dependencies = [
     "pynhd>=0.14.0",
     "py3dep>=0.14.0",
     "xarray-spatial>=0.3.0",
+        "dask>=2021.0.0",
     "pygridmet>=0.14.0",
     "pygeohydro>=0.14.0",
     "pygeoutils>=0.14.0",
