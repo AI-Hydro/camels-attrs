@@ -1,204 +1,63 @@
 ---
-title: 'camels-attrs: A Python Package for Extracting CAMELS-like Catchment Attributes and Hydrometeorological Data for Any USGS Gauge in the USA'
+title: 'camels-attrs: A Python Package for Extracting CAMELS-like Catchment Attributes for Any USGS Gauge in the United States'
 tags:
   - Python
   - hydrology
   - catchment attributes
   - CAMELS
   - watershed characterization
-  - open data
+  - geospatial data
   - reproducible research
-  - hydrological modeling
 authors:
   - name: Mohammad Galib
     orcid: 0000-0001-8593-9110
-    equal-contrib: true
+    corresponding: true
     affiliation: 1
   - name: Venkatesh Merwade
     orcid: 0000-0001-5518-2890
-    equal-contrib: false
     affiliation: 1
 affiliations:
   - name: Lyles School of Civil Engineering, Purdue University, West Lafayette, IN, USA
     index: 1
-date: 8 October 2025
+date: 6 December 2025
 bibliography: paper.bib
 ---
 
 # Summary
 
-Large-sample hydrology studies and distributed hydrological modeling require comprehensive catchment attributes and hydrometeorological forcing data. The Catchment Attributes and Meteorology for Large-sample Studies (CAMELS) dataset [@addor2017camels; @newman2015development] has become a cornerstone resource, providing standardized attributes for 671 basins across the contiguous United States. However, CAMELS is limited to a pre-selected set of gauges, restricting its applicability to new study sites and emerging research questions.
+Understanding watersheds is fundamental to managing water resources, predicting floods, and assessing environmental change. Scientists characterize watersheds using attributes such as average elevation, soil type, vegetation cover, and climate patterns. The Catchment Attributes and Meteorology for Large-sample Studies (CAMELS) dataset [@addor2017camels; @newman2015development] provides standardized attributes for 671 watersheds across the United States and has become a cornerstone resource in hydrology research.
 
-`camels-attrs` is an open-source Python package that addresses this limitation by enabling the extraction of CAMELS-like attributes for any USGS stream gauge in the United States. The package automates the entire workflow—from watershed delineation to attribute extraction—making it possible to generate standardized catchment characterizations on-demand. This capability is essential for model transferability studies, ungauged basin predictions, and expanding the geographic scope of comparative hydrology research.
+`camels-attrs` is an open-source Python package (MIT Licensed) that extends the CAMELS methodology to any United States Geological Survey (USGS) stream gauge location in the country. Given a gauge identifier, the package automatically delineates the upstream watershed boundary according to drainage basins and extracts over 70 standardized catchment attributes spanning topography, climate, soil, vegetation, geology, and hydrology. The software also retrieves daily hydrometeorological forcing data (precipitation, temperature, solar radiation, wind speed, humidity) for user-specified time periods. Visualization tools produce publication-ready watershed maps and multi-gauge comparison figures. The package is available on PyPI and GitHub.
 
 # Statement of Need
 
-Hydrological research increasingly relies on large-sample studies to understand catchment behavior across diverse environmental gradients [@gupta2014large]. The original CAMELS dataset revolutionized this field by providing standardized attributes, but its fixed coverage limits: (1) the inclusion of new study sites, (2) temporal updates as data sources improve, (3) customization of attribute extraction methods, and (4) integration with emerging data products.
+Large-sample hydrology—studying many watersheds simultaneously to understand hydrological processes across environmental gradients—has transformed water science over the past decade [@gupta2014large]. The CAMELS dataset catalyzed this paradigm shift by providing consistent catchment attributes for model benchmarking, machine learning applications, and comparative studies. However, CAMELS remains limited to a fixed set of 671 pre-selected gauges, creating barriers for hydrologists, environmental scientists, and water resource engineers who wish to: (1) include additional study sites in their analyses, (2) apply the same methodology to new locations, (3) update attributes as source datasets improve, or (4) customize extraction parameters for specific applications.
 
-Existing tools for catchment characterization are typically fragmented across multiple software packages, require manual data collection, or lack standardization. Researchers often spend considerable time assembling attributes from disparate sources, leading to inconsistencies and reduced reproducibility. Several Python packages exist for hydrological data retrieval (e.g., `dataretrieval`, `hydrofunctions`) but none provide comprehensive, CAMELS-consistent attribute extraction.
+Existing tools for hydrological data retrieval are fragmented across purpose-specific packages. The `dataretrieval` package [@dataretrieval] focuses on USGS water observations without catchment characterization. The `hydrofunctions` package [@hydrofunctions] provides Pythonic access to streamflow timeseries but does not extract landscape attributes. The HyRiver suite [@hydrodata], which includes `pynhd`, `py3dep`, `pygeohydro`, and `pygridmet`, offers low-level access to individual geospatial datasets but requires users to implement their own extraction workflows and ensure methodological consistency with CAMELS.
 
-`camels-attrs` fills this gap by providing:
+`camels-attrs` addresses these gaps by providing a unified, high-level interface that orchestrates watershed delineation and attribute extraction from multiple authoritative data sources—USGS 3DEP for topography, GridMET for climate, gNATSGO and POLARIS for soils, MODIS and NLCD for vegetation, GLiM and GLHYMPS for geology, and USGS NWIS for streamflow. The package implements the same algorithms and definitions used in the original CAMELS dataset, ensuring methodological consistency while enabling on-demand extraction for any USGS gauge. This capability supports prediction in ungauged basins, model transferability studies, and extension of existing large-sample analyses to new regions.
 
-1. **Automated, reproducible workflows** for extracting 70+ standardized catchment attributes
-2. **Integration with authoritative data sources** (USGS, GridMET, gNATSGO, MODIS, NLCD)
-3. **Extensibility** for custom attribute definitions and new data sources
-4. **Hydrometeorological timeseries extraction** for model forcing
-5. **Publication-quality visualization** capabilities
-6. **Batch processing** for multiple gauges
+The software follows modern Python packaging standards, provides both programmatic and command-line interfaces, and includes comprehensive documentation with usage examples. Error handling ensures graceful degradation when individual data sources are unavailable, and the modular architecture allows researchers to extend the package with custom attribute extractors.
 
-The package directly addresses the JOSS scope by solving complex modeling problems in a scientific context, extracting knowledge from large datasets, and enabling new research challenges through standardized, reproducible catchment characterization.
+# Implemented Functionality
 
-# Related Work and Comparison
+The package extracts attributes organized into six categories following CAMELS conventions:
 
-Several software packages exist in the hydrological data retrieval space:
+- **Topography**: Elevation statistics (mean, minimum, maximum, standard deviation), slope metrics, and drainage area from 30-meter digital elevation models.
+- **Climate**: Mean precipitation, potential evapotranspiration, temperature, aridity index, seasonality indices, snow fraction, and extreme precipitation event characteristics from GridMET data.
+- **Soil**: Porosity, available water capacity, texture fractions (sand, silt, clay), depth, and hydraulic conductivity from gNATSGO and POLARIS datasets.
+- **Vegetation**: Leaf area index, normalized difference vegetation index (converted to green vegetation fraction), land cover fractions, and root depth estimates from MODIS imagery and the National Land Cover Database.
+- **Geology**: Lithology classes, carbonate rock fraction, geological permeability, and porosity from the Global Lithological Map and Global Hydrogeology Maps via the `pygeoglim` package [@pygeoglim].
+- **Hydrology**: Flow statistics (mean, percentiles, variability), baseflow index computed using the Lyne-Hollick digital filter, runoff ratio, streamflow elasticity, flow duration curve slope, and timing metrics.
 
-- **dataretrieval** [@dataretrieval]: USGS package for retrieving water data, but limited to streamflow observations
-- **hydrofunctions** [@hydrofunctions]: Python library for USGS data, focused on timeseries, not catchment attributes  
-- **HydroData** suite (`pynhd`, `py3dep`, `pygeohydro`, `pygridmet`) [@hydrodata]: Low-level data access libraries that `camels-attrs` builds upon
-- **CAMELS dataset** [@addor2017camels]: Static dataset, not software for on-demand extraction
+Additionally, the package extracts daily hydrometeorological forcing timeseries and provides functions for computing monthly aggregations, annual water balances, and climate statistics suitable for hydrological model input preparation.
 
-`camels-attrs` uniquely combines these capabilities into a single, high-level interface specifically designed for CAMELS-consistent attribute extraction, following established methodologies while enabling customization and extension.
+# Ongoing Research Applications
 
-# Implementation
-
-## Architecture
-
-The package follows a modular design with specialized modules for each attribute category:
-
-- **watershed.py**: Automated delineation using NLDI and polygon simplification
-- **topography.py**: DEM-derived metrics (elevation, slope) using `py3dep`
-- **climate.py**: Climate indices from GridMET using `pygridmet`
-- **soil.py**: Soil properties from gNATSGO and POLARIS using `pygeohydro`
-- **vegetation.py**: Vegetation metrics from MODIS (Planetary Computer) and NLCD
-- **geology.py**: Geological attributes from GLiM and GLHYMPS via `pygeoglim`
-- **hydrology.py**: Hydrological signatures from USGS NWIS using `hydrofunctions`
-- **timeseries.py**: Hydrometeorological forcing data extraction and processing
-- **visualization.py**: Multi-panel watershed visualization with DEM, streams, and statistics
-- **multi_gauge_viz.py**: Comparative visualization for multiple gauges
-
-## Key Technical Features
-
-1. **Spatial Data Processing**: Leverages `geopandas`, `xarray`, and `rioxarray` for efficient geospatial operations
-2. **API Integration**: Connects to multiple authoritative data sources with error handling and retry logic
-3. **Computational Efficiency**: Uses spatial masking, chunking, and caching to minimize data transfer
-4. **Extensibility**: Modular design allows users to add custom attribute extractors
-5. **CLI Integration**: Command-line interface (`camels-extract`) for automated workflows
-6. **Visualization**: Publication-ready maps using `matplotlib`, `cartopy`, and `contextily`
-
-## Data Sources
-
-The package integrates the following authoritative data sources:
-
-- **Watershed boundaries**: USGS NLDI (Network-Linked Data Index)
-- **Topography**: USGS 3DEP (3D Elevation Program) at 10m resolution
-- **Climate**: GridMET (4km daily meteorological data, 1979-present)
-- **Soil**: gNATSGO (gridded National Soil Survey Geographic Database) and POLARIS
-- **Vegetation**: MODIS (MOD13Q1, MOD15A2H), NLCD (National Land Cover Database)
-- **Geology**: GLiM (Global Lithological Map), GLHYMPS (Global Hydrogeology Maps)
-- **Streamflow**: USGS NWIS (National Water Information System)
-
-# Example Usage
-
-## Basic Attribute Extraction
-
-```python
-from camels_attrs import CamelsExtractor
-
-# Extract attributes for a single gauge
-extractor = CamelsExtractor('01031500')
-attributes = extractor.extract_all()
-
-# Save to CSV
-extractor.save('attributes.csv')
-
-# Or get as DataFrame for analysis
-df = extractor.to_dataframe()
-print(f"Watershed area: {attributes['area_geospa_fabric']} km²")
-print(f"Mean elevation: {attributes['elev_mean']} m")
-print(f"Aridity index: {attributes['aridity']}")
-```
-
-## Hydrometeorological Timeseries
-
-```python
-# Extract daily forcing data
-forcing_data = extractor.extract_timeseries('2010-01-01', '2020-12-31')
-
-# Calculate monthly aggregations
-from camels_attrs import get_monthly_summary
-monthly = get_monthly_summary(forcing_data)
-
-# Calculate water balance
-from camels_attrs import calculate_water_balance
-water_balance = calculate_water_balance(forcing_data)
-```
-
-## Batch Processing
-
-```python
-from camels_attrs import extract_multiple_gauges
-
-# Process multiple gauges
-gauge_ids = ['01031500', '02177000', '06803530']
-df = extract_multiple_gauges(gauge_ids)
-df.to_csv('multiple_gauges.csv', index=False)
-```
-
-## Visualization
-
-```python
-# Create comprehensive watershed map
-fig = extractor.create_comprehensive_map(
-    save_path='watershed_map.png',
-    show=True
-)
-```
-
-## Command-Line Interface
-
-```bash
-# Extract attributes
-camels-extract 01031500 -o attributes.csv
-
-# Include timeseries data
-camels-extract 01031500 --timeseries --monthly
-
-# Multiple gauges
-camels-extract 01031500 02177000 -o combined.csv
-```
-
-# Community Guidelines
-
-## Contributing
-
-We welcome contributions from the hydrological community. Please see our GitHub repository for:
-
-- **Issue tracking**: Report bugs or request features
-- **Pull requests**: Submit code improvements
-- **Documentation**: Help improve tutorials and examples
-
-## Getting Help
-
-- **Documentation**: https://github.com/galib9690/camels-attrs#readme
-- **Issues**: https://github.com/galib9690/camels-attrs/issues
-- **Examples**: See `example_usage.ipynb` in the repository
-
-## Citation
-
-If you use `camels-attrs` in your research, please cite:
-
-```bibtex
-@software{galib2025camelsattrs,
-  author = {Galib, Mohammad and Merwade, Venkatesh},
-  title = {camels-attrs: CAMELS-like Catchment Attributes Extraction},
-  year = {2025},
-  publisher = {GitHub},
-  url = {https://github.com/galib9690/camels-attrs}
-}
-```
+The package is actively supporting advanced watershed characterization for hydrological modeling studies at Purdue University. Researchers are leveraging the tool to develop distributed hydrological models that demand consistent, high-quality catchment parameterization across diverse study sites. By automating the retrieval of critical attributes—such as topography, climate, and soil characteristics—the package has dramatically streamlined the workflow, reducing the time required for model setup from weeks of manual data collection to just minutes of automated processing. This efficiency gain allows for more robust, large-scale comparative analyses and accelerates the development of reliable hydrological models.
 
 # Acknowledgements
 
-This work was supported by the Lyles School of Civil Engineering at Purdue University. We acknowledge the USGS, NOAA, NASA, and other agencies for providing open access to hydrometeorological and geospatial data. We thank the developers and maintainers of the HydroData suite of Python packages (`pynhd`, `py3dep`, `pygeohydro`, `pygridmet`, `pygeoutils`) upon which this package is built. We also thank the broader scientific Python community for developing the foundational libraries (NumPy, pandas, geopandas, xarray, matplotlib) that make this work possible.
+This work was supported by the Lyles School of Civil Engineering at Purdue University. We acknowledge the developers of the HyRiver suite of Python packages upon which this package builds, and the agencies—including USGS, NOAA, and NASA—that provide open access to hydrological and geospatial data.
 
 # References
