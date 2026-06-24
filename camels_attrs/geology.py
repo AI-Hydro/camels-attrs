@@ -35,7 +35,7 @@ def extract_geological_attributes(watershed_gdf):
             "glim_2nd_class_frac": 0.4,
             "carbonate_rocks_frac": 0.0,
             "geol_permeability": -14.0,
-            "geol_porostiy": 0.1
+            "geol_porosity": 0.1
         }
     
     try:
@@ -57,7 +57,7 @@ def extract_geological_attributes(watershed_gdf):
         except:
             glhymps_result = {
                 "geol_permeability": -14.0,  # log10(m²)
-                "geol_porostiy": 0.1  # fraction
+                "geol_porosity": 0.1  # fraction
             }
         
         # Merge results
@@ -80,5 +80,5 @@ def extract_geological_attributes(watershed_gdf):
             "glim_2nd_class_frac": 0.4,
             "carbonate_rocks_frac": 0.0,
             "geol_permeability": -14.0,
-            "geol_porostiy": 0.1
+            "geol_porosity": 0.1
         }
