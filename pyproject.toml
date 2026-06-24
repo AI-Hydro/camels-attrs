@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "camels-attrs"
-version = "1.0.2"
+version = "1.0.3"
 description = "Extract CAMELS-like catchment attributes for any USGS gauge site in the USA"
 readme = "README.md"
 requires-python = ">=3.8"
