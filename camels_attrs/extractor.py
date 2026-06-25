@@ -11,20 +11,71 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-from .watershed import delineate_watershed
-from .topography import extract_topographic_attributes
-from .climate import fetch_climate_data, compute_climate_indices
-from .soil import extract_soil_attributes
-from .vegetation import extract_vegetation_attributes
-from .geology import extract_geological_attributes
-from .hydrology import extract_hydrological_signatures
-from .timeseries import (
-    fetch_forcing_data, 
-    calculate_pet_hargreaves,
-    calculate_forcing_statistics,
-    get_monthly_summary,
-    calculate_water_balance
-)
+
+def delineate_watershed(*args, **kwargs):
+    from .watershed import delineate_watershed as _impl
+
+    return _impl(*args, **kwargs)
+
+
+def extract_topographic_attributes(*args, **kwargs):
+    from .topography import extract_topographic_attributes as _impl
+
+    return _impl(*args, **kwargs)
+
+
+def fetch_climate_data(*args, **kwargs):
+    from .climate import fetch_climate_data as _impl
+
+    return _impl(*args, **kwargs)
+
+
+def compute_climate_indices(*args, **kwargs):
+    from .climate import compute_climate_indices as _impl
+
+    return _impl(*args, **kwargs)
+
+
+def extract_soil_attributes(*args, **kwargs):
+    from .soil import extract_soil_attributes as _impl
+
+    return _impl(*args, **kwargs)
+
+
+def extract_vegetation_attributes(*args, **kwargs):
+    from .vegetation import extract_vegetation_attributes as _impl
+
+    return _impl(*args, **kwargs)
+
+
+def extract_geological_attributes(*args, **kwargs):
+    from .geology import extract_geological_attributes as _impl
+
+    return _impl(*args, **kwargs)
+
+
+def extract_hydrological_signatures(*args, **kwargs):
+    from .hydrology import extract_hydrological_signatures as _impl
+
+    return _impl(*args, **kwargs)
+
+
+def fetch_forcing_data(*args, **kwargs):
+    from .timeseries import fetch_forcing_data as _impl
+
+    return _impl(*args, **kwargs)
+
+
+def calculate_pet_hargreaves(*args, **kwargs):
+    from .timeseries import calculate_pet_hargreaves as _impl
+
+    return _impl(*args, **kwargs)
+
+
+def calculate_forcing_statistics(*args, **kwargs):
+    from .timeseries import calculate_forcing_statistics as _impl
+
+    return _impl(*args, **kwargs)
 
 
 class CamelsExtractor:
@@ -258,7 +309,7 @@ class CamelsExtractor:
         # 6. GEOLOGICAL CHARACTERISTICS (OPTIONAL - warn on failure)
         # ====================================================================
         if verbose:
-            logger.info("[6/7] Extracting geological characteristics...")
+            logger.info("[6/7] Extracting geological attributes...")
         try:
             geol_attrs = extract_geological_attributes(self.watershed_gdf)
             self.attributes.update(geol_attrs)
@@ -277,7 +328,7 @@ class CamelsExtractor:
         # 7. HYDROLOGICAL SIGNATURES (OPTIONAL - warn on failure)
         # ====================================================================
         if verbose:
-            logger.info("[7/7] Computing hydrological signatures...")
+            logger.info("[7/7] Extracting hydrological signatures...")
         try:
             hydro_attrs = extract_hydrological_signatures(
                 gauge_id=self.gauge_id,

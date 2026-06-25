@@ -5,7 +5,6 @@ Hydrometeorological time series data extraction from GridMET
 import pandas as pd
 import numpy as np
 from typing import Optional, Tuple
-import pygridmet as gridmet
 
 
 def fetch_forcing_data(watershed_geom, start_date: str, end_date: str) -> Optional[pd.DataFrame]:
@@ -36,6 +35,8 @@ def fetch_forcing_data(watershed_geom, start_date: str, end_date: str) -> Option
         - pet_mm: potential evapotranspiration (mm/day)
     """
     try:
+        import pygridmet as gridmet
+
         print(f"Fetching GridMET data from {start_date} to {end_date}...")
         
         # Define variables to fetch

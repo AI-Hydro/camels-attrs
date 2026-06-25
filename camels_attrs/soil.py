@@ -3,14 +3,6 @@ Soil characteristics extraction (aligned with original notebook)
 """
 
 import numpy as np
-import xarray as xr
-import rioxarray
-import geopandas as gpd
-from shapely.geometry import box
-from pystac_client import Client
-import planetary_computer
-from pygeohydro import soil_properties, soil_polaris
-from pygeoutils import xarray_geomask
 
 
 def extract_soil_attributes(watershed_geom, crs="EPSG:4326"):
@@ -33,6 +25,14 @@ def extract_soil_attributes(watershed_geom, crs="EPSG:4326"):
         Soil attributes including porosity, conductivity, depth, texture fractions
     """
     try:
+        import geopandas as gpd
+        import planetary_computer
+        import rioxarray
+        from pygeohydro import soil_polaris, soil_properties
+        from pygeoutils import xarray_geomask
+        from pystac_client import Client
+        from shapely.geometry import box
+
         print("  - Extracting soil attributes...")
         
         # Convert geometry to GeoSeries with CRS (required by xarray_geomask)

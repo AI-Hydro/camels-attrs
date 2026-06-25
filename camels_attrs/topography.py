@@ -2,9 +2,36 @@
 Topographic attributes extraction from DEM data
 """
 
-import py3dep
-import xrspatial
 import geopandas as gpd
+import numpy as np
+
+
+def _slope_percent_from_dem(dem_proj):
+    """Return percent slope from a projected DEM without requiring xrspatial.
+
+    xarray-spatial currently resolves through old numba/llvmlite releases that
+    do not install on modern Python (3.13). For the package's baseline DEM
+    statistics, a deterministic finite-difference slope is sufficient and keeps
+    installation practical for current Python users.
+    """
+    arr = np.asarray(dem_proj.values, dtype=float)
+    if arr.ndim > 2:
+        arr = np.squeeze(arr)
+    if arr.ndim != 2:
+        raise ValueError(f"Expected a 2-D DEM array, got shape {arr.shape!r}")
+
+    transform = getattr(getattr(dem_proj, "rio", None), "transform", lambda: None)()
+    if transform is not None:
+        dx = abs(float(transform.a)) or 1.0
+        dy = abs(float(transform.e)) or 1.0
+    else:
+        x = dem_proj.coords.get("x")
+        y = dem_proj.coords.get("y")
+        dx = float(abs(np.nanmedian(np.diff(x.values)))) if x is not None and x.size > 1 else 1.0
+        dy = float(abs(np.nanmedian(np.diff(y.values)))) if y is not None and y.size > 1 else 1.0
+
+    dz_dy, dz_dx = np.gradient(arr, dy, dx)
+    return np.sqrt(dz_dx**2 + dz_dy**2) * 100.0
 
 
 def extract_topographic_attributes(watershed_geom, resolution=30):
@@ -36,14 +63,14 @@ def extract_topographic_attributes(watershed_geom, resolution=30):
         If DEM extraction fails
     """
     try:
+        import py3dep
+
         # Get DEM data
         dem = py3dep.get_dem(watershed_geom, resolution=resolution)
         dem_proj = dem.rio.reproject("EPSG:5070")  # Equal-area projection
         
         # Compute slope
-        slope_deg = xrspatial.slope(dem_proj)
-        slope_mpm = py3dep.deg2mpm(slope_deg)
-        slope_pct = slope_mpm * 100
+        slope_pct = _slope_percent_from_dem(dem_proj)
         
         # Calculate elevation statistics
         elevation_stats = {
@@ -55,8 +82,8 @@ def extract_topographic_attributes(watershed_geom, resolution=30):
         
         # Calculate slope statistics
         slope_stats = {
-            "slope_mean": float(slope_pct.mean().values),
-            "slope_std": float(slope_pct.std().values),
+            "slope_mean": float(np.nanmean(slope_pct)),
+            "slope_std": float(np.nanstd(slope_pct)),
         }
         
         # Calculate drainage area

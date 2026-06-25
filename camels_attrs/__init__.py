@@ -13,16 +13,36 @@ __version__ = "1.0.3"
 __author__ = "Mohammad Galib"
 __email__ = "mgalib@purdue.edu"
 
-from .extractor import CamelsExtractor, extract_multiple_gauges
 from .timeseries import (
-    fetch_forcing_data,
     calculate_pet_hargreaves,
-    get_monthly_summary,
+    calculate_forcing_statistics,
     calculate_water_balance,
-    calculate_forcing_statistics
+    fetch_forcing_data,
+    get_monthly_summary,
 )
-from .visualization import create_comprehensive_watershed_map
-from .multi_gauge_viz import plot_attributes_comparison, create_multi_gauge_comparison
+
+
+_LAZY_EXPORTS = {
+    "CamelsExtractor": (".extractor", "CamelsExtractor"),
+    "extract_multiple_gauges": (".extractor", "extract_multiple_gauges"),
+    "create_comprehensive_watershed_map": (
+        ".visualization",
+        "create_comprehensive_watershed_map",
+    ),
+    "plot_attributes_comparison": (".multi_gauge_viz", "plot_attributes_comparison"),
+    "create_multi_gauge_comparison": (".multi_gauge_viz", "create_multi_gauge_comparison"),
+}
+
+
+def __getattr__(name: str):
+    if name not in _LAZY_EXPORTS:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    module_name, attr_name = _LAZY_EXPORTS[name]
+    from importlib import import_module
+
+    value = getattr(import_module(module_name, __name__), attr_name)
+    globals()[name] = value
+    return value
 
 __all__ = [
     "CamelsExtractor",

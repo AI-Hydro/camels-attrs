@@ -2,8 +2,6 @@
 Watershed delineation module using NLDI API
 """
 
-from pynhd import NLDI
-from pygeohydro import NWIS
 import geopandas as gpd
 
 
@@ -31,6 +29,9 @@ def delineate_watershed(gauge_id):
         If watershed delineation fails
     """
     try:
+        from pynhd import NLDI
+        from pygeohydro import NWIS
+
         # Delineate watershed using NLDI
         nldi = NLDI()
         watershed_gdf = nldi.get_basins(gauge_id)
