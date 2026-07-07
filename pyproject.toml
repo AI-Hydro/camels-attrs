@@ -57,11 +57,13 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0.0",
-    "pytest-cov>=3.0.0",
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
     "black>=22.0.0",
     "flake8>=4.0.0",
     "mypy>=0.950",
+    "ruff>=0.1.0",
+    "import-linter>=2.0",
 ]
 
 [project.urls]
@@ -77,3 +79,33 @@ camels-extract = "camels_attrs.cli:main"
 where = ["."]
 include = ["camels_attrs*"]
 exclude = ["tests*"]
+
+[tool.pytest.ini_options]
+markers = [
+    "live: tests requiring network + GEE auth.",
+]
+
+# ── Layering contract — camels-attrs is the CONUS reference implementation;
+# aihydro-lsh validates against it (validate-only dependency, downward from
+# lsh's perspective). It has one legitimate downward dependency of its own
+# (pygeoglim, for CONUS geology attributes — see geology.py, declared in
+# [project.dependencies]) but must never import the tools/domain layer or
+# any sibling data/recipe package. Declarative counterpart to
+# tests/test_layering.py. ───────────────────────────────────────────────────
+[tool.importlinter]
+root_package = "camels_attrs"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "camels_attrs must not import ai_hydro or sibling data/recipe packages"
+type = "forbidden"
+source_modules = ["camels_attrs"]
+forbidden_modules = ["ai_hydro", "aihydro_data", "aihydro_watershed", "aihydro_lsh", "aihydro_tools"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]
