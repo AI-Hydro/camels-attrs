@@ -134,6 +134,19 @@ def compute_timing_stats_camels(q_mm_day: pd.Series) -> dict:
 # Main Extraction Logic
 # ------------------------------
 
+def compute_flow_quantiles_camels(q_vals) -> dict:
+    """CAMELS q5 / q95 (Addor et al. 2017, Table 3).
+
+    ``q5`` is the 5% flow quantile (low flow) and ``q95`` the 95% flow quantile
+    (high flow): plain non-exceedance quantiles of the daily series. Versions
+    before the P2-D0 fix returned them the other way round.
+    """
+    return {
+        "q5": float(np.quantile(q_vals, 0.05)),
+        "q95": float(np.quantile(q_vals, 0.95)),
+    }
+
+
 def extract_hydrological_signatures(
     gauge_id, 
     watershed_gdf,  # ✅ Changed from watershed_geom to watershed_gdf
@@ -182,8 +195,7 @@ def extract_hydrological_signatures(
         # --- 1. Basic Flow Stats ---
         hydro_sigs["q_mean"] = float(np.mean(q_vals))
         hydro_sigs["q_std"] = float(np.std(q_vals))
-        hydro_sigs["q5"] = float(np.quantile(q_vals, 0.95)) # CAMELS High Flow
-        hydro_sigs["q95"] = float(np.quantile(q_vals, 0.05)) # CAMELS Low Flow
+        hydro_sigs.update(compute_flow_quantiles_camels(q_vals))
         hydro_sigs["q_median"] = float(np.median(q_vals))
         
         # --- 2. Baseflow Index ---

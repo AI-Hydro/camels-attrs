@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **`q5` / `q95` follow CAMELS (defect P2-D0).** `extract_hydrological_signatures` set `q5`
+  to the 95th percentile of daily flow and `q95` to the 5th, the opposite of CAMELS (Addor
+  et al. 2017, Table 3: `q5` = 5% flow quantile, low flow; `q95` = 95% flow quantile, high
+  flow). Values returned by earlier versions (including 1.0.3) have the two keys swapped.
+  New helper `compute_flow_quantiles_camels`; test `tests/test_flow_quantiles.py`.
+
 ## [0.1.0] - 2025-10-07
 
 ### Added
