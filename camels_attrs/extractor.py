@@ -286,9 +286,16 @@ class CamelsExtractor:
                 end_date=self.hydro_end
             )
             self.attributes.update(hydro_attrs)
-            extraction_status["hydrology"] = True
-            if verbose:
-                logger.info(f"  ✓ Hydrology extracted ({len(hydro_attrs)} attributes)\n")
+            if hydro_attrs.get("hydro_status") == "ok":
+                extraction_status["hydrology"] = True
+                if verbose:
+                    logger.info(f"  ✓ Hydrology extracted ({len(hydro_attrs)} attributes)\n")
+            else:
+                warning_msg = (f"Hydrology not computed - {hydro_attrs.get('hydro_status')}: "
+                               f"{hydro_attrs.get('hydro_reason')}")
+                if verbose:
+                    logger.warning(f"  ⚠ Warning: {warning_msg}\n")
+                self.attributes.setdefault("_warnings", []).append(warning_msg)
         except Exception as e:
             warning_msg = f"Hydrology extraction failed - {str(e)}"
             if verbose:
