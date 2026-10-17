@@ -28,6 +28,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `_status["hydrology"]=False` and adds a `_warnings` entry whenever status is not `ok`
   (previously an all-NaN result was reported as successfully extracted).
 
+- Gauge name/lat/lon in `delineate_watershed_for_gauge` now come from the Water Data API
+  `monitoring-locations` collection (`usgs_daily.fetch_monitoring_location`) instead of
+  pygeohydro `NWIS().get_info` (legacy waterservices `/site`, decommissioned 2027-02-22);
+  metadata gains `gauge_datum` (`original_horizontal_datum`; the API states no CRS).
+
 ### Removed
 - `hydrofunctions` dependency (pygeohydro is kept for its other uses).
 

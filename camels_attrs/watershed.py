@@ -3,7 +3,7 @@ Watershed delineation module using NLDI API
 """
 
 from pynhd import NLDI
-from pygeohydro import NWIS
+from .usgs_daily import fetch_monitoring_location
 import geopandas as gpd
 
 
@@ -45,20 +45,17 @@ def delineate_watershed(gauge_id):
         area_km2 = watershed_gdf.to_crs("EPSG:5070").geometry.area.iloc[0] / 1e6
         
         # Fetch gauge metadata
-        nwis = NWIS()
-        site_info = nwis.get_info([{"site": gauge_id}])
-        site_info["site_no"] = site_info["site_no"].astype(str)
-        row = site_info.loc[site_info["site_no"] == str(gauge_id)].iloc[0]
-        
-        gauge_lat = float(row["dec_lat_va"])
-        gauge_lon = float(row["dec_long_va"])
-        gauge_name = row["station_nm"]
-        
+        loc = fetch_monitoring_location(gauge_id)
+        gauge_lat = loc["lat"]
+        gauge_lon = loc["lon"]
+        gauge_name = loc["name"]
+
         metadata = {
             "gauge_id": str(gauge_id),
             "gauge_name": gauge_name,
             "gauge_lat": gauge_lat,
             "gauge_lon": gauge_lon,
+            "gauge_datum": loc["original_horizontal_datum"],
             "geometry": watershed_geom
         }
         

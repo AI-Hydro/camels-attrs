@@ -188,3 +188,37 @@ def fetch_daily_discharge(gauge_id: str, start_date: str, end_date: str) -> pd.D
     df.attrs["null_dropped"] = nulls
     df.attrs["units_native"] = unit
     return df[["q_cms", "q_native", "approval_status"]]
+
+
+def fetch_monitoring_location(site: str) -> dict:
+    """Gauge metadata from the Water Data API ``monitoring-locations`` collection.
+
+    Replaces the decommissioned legacy waterservices ``/site`` lookup. Returns ``name``,
+    ``lon``, ``lat`` (GeoJSON order, as published; the API does not state a CRS, so the
+    stated ``original_horizontal_datum`` is recorded, not assumed), ``drainage_area``
+    (as published, unit unstated by the API; USGS documents square miles) and ``site_id``.
+    Raises :class:`UsgsDailyError` for an empty result, a missing geometry or name, or
+    non-finite coordinates.
+    """
+    sid = _site_id(site)
+    doc = _get_json(f"{BASE}/collections/monitoring-locations/items", {"id": sid, "f": "json"})
+    feats = [f for f in doc["features"] if isinstance(f, dict) and
+             (f.get("properties") or {}).get("id") == sid]
+    if not feats:
+        raise UsgsDailyError("USGS_NO_SITE", f"monitoring location {sid} not found")
+    if len(feats) > 1:
+        raise UsgsDailyError("USGS_MULTIPLE_SITES", f"{sid} matched {len(feats)} monitoring locations")
+    f = feats[0]
+    p = f["properties"]
+    try:
+        lon, lat = (float(x) for x in f["geometry"]["coordinates"][:2])
+    except (KeyError, TypeError, ValueError) as e:
+        raise UsgsDailyError("USGS_BAD_SCHEMA", f"{sid} has no usable point geometry") from e
+    if not (math.isfinite(lon) and math.isfinite(lat)):
+        raise UsgsDailyError("USGS_BAD_SCHEMA", f"{sid} has non-finite coordinates")
+    name = p.get("monitoring_location_name")
+    if not isinstance(name, str) or not name:
+        raise UsgsDailyError("USGS_BAD_SCHEMA", f"{sid} has no monitoring_location_name")
+    return {"site_id": sid, "name": name, "lon": lon, "lat": lat,
+            "original_horizontal_datum": p.get("original_horizontal_datum"),
+            "drainage_area": p.get("drainage_area")}

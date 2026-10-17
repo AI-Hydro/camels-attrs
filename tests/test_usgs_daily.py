@@ -430,3 +430,41 @@ def test_hydro_error_status(monkeypatch):
     monkeypatch.setattr(h, "fetch_precipitation_data", boom)
     out = h.extract_hydrological_signatures("01013500", _gdf())
     assert out["hydro_status"] == "error" and out["hydro_reason"] == "COMPUTE_ERROR: ZeroDivisionError"
+
+
+# ---- monitoring-locations lookup (replaces legacy /site) ----
+
+def test_monitoring_location_fixture(replay):
+    reg, _ = replay
+    reg("014")
+    loc = ud.fetch_monitoring_location("01013500")
+    raw = json.loads(body("014"))["features"][0]
+    assert loc["site_id"] == "USGS-01013500"
+    assert loc["name"] == "Fish River near Fort Kent, Maine"
+    assert (loc["lon"], loc["lat"]) == tuple(raw["geometry"]["coordinates"])
+    assert loc["original_horizontal_datum"] == "NAD83" and loc["drainage_area"] == 870.0
+
+
+def test_monitoring_location_refusals(replay):
+    reg, _ = replay
+    reg("014", data=json.dumps({"features": []}).encode())
+    with pytest.raises(ud.UsgsDailyError) as e:
+        ud.fetch_monitoring_location("01013500")
+    assert e.value.code == "USGS_NO_SITE"
+    d = json.loads(body("014"))
+    d["features"][0]["geometry"] = None
+    reg("014", data=json.dumps(d).encode())
+    with pytest.raises(ud.UsgsDailyError) as e:
+        ud.fetch_monitoring_location("01013500")
+    assert e.value.code == "USGS_BAD_SCHEMA"
+    d = json.loads(body("014"))
+    d["features"][0]["properties"]["monitoring_location_name"] = None
+    reg("014", data=json.dumps(d).encode())
+    with pytest.raises(ud.UsgsDailyError):
+        ud.fetch_monitoring_location("01013500")
+
+
+def test_watershed_uses_waterdata_lookup(monkeypatch):
+    import camels_attrs.watershed as w
+    src = Path(w.__file__).read_text()
+    assert "NWIS" not in src and "fetch_monitoring_location" in src
