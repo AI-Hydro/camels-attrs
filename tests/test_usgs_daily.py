@@ -228,8 +228,8 @@ def test_fetch_streamflow_data_series(replay):
     reg, _ = replay
     reg("001")
     s = fetch_streamflow_data("01013500", "1989-10-01", "2009-09-30")
-    assert isinstance(s, pd.Series) and len(s) == 7305
-    assert s.attrs["approval_status"].iloc[0] == "Approved"
+    assert isinstance(s, pd.DataFrame) and len(s) == 7305
+    assert s["approval_status"].iloc[0] == "Approved"
 
 
 def test_legacy_parity(replay):
@@ -274,3 +274,145 @@ def test_api_key_header_only_and_no_redirect(monkeypatch):
     assert "X-Api-Key" not in seen["headers"]
     with pytest.raises(ud.UsgsDailyError):
         ud._http_get("https://evil.example.com/x")
+
+
+# ---- review round: raw-body numerics, real-seam paging, strictness, hydrology status ----
+
+def test_provisional_numeric_vs_raw_body(replay):
+    reg, _ = replay
+    reg("006")
+    df = ud.fetch_daily_discharge("01013500", "2026-06-19", "2026-10-17")
+    feats = json.loads(body("006"))["features"]
+    raw = {f["properties"]["time"]: f["properties"] for f in feats if f["properties"]["value"] is not None}
+    assert len(df) == len(raw)
+    for t, row in df.iterrows():
+        p = raw[t.strftime("%Y-%m-%d")]
+        assert row["q_native"] == float(p["value"])
+        assert row["q_cms"] == float(p["value"]) * 0.028316846592
+        assert row["approval_status"] == p["approval_status"]
+
+
+def _fake_requests(monkeypatch, pages):
+    """Mock requests.get below _http_get so the real _check_url runs on every hop."""
+    import requests
+    seen = []
+
+    class R:
+        def __init__(self, c):
+            self.status_code, self.content = 200, c
+
+    def fake_get(url, params=None, headers=None, timeout=None, allow_redirects=True):
+        seen.append(url)
+        return R(pages[len(seen) - 1])
+
+    monkeypatch.setattr(requests, "get", fake_get)
+    return seen
+
+
+def test_real_seam_paging_checks_next(monkeypatch):
+    monkeypatch.setattr(ud, "PAGE_LIMIT", 2000)
+    pages = [body(p) for p in ("037", "038", "039", "040")]
+    seen = _fake_requests(monkeypatch, pages)
+    assert len(ud.fetch_daily_discharge("01013500", "1989-10-01", "2009-09-30")) == 7305
+    assert len(seen) == 4
+    d = json.loads(pages[0])
+    for l in d["links"]:
+        if l["rel"] == "next":
+            l["href"] = "https://evil.example.com/x"
+    seen = _fake_requests(monkeypatch, [json.dumps(d).encode()])
+    with pytest.raises(ud.UsgsDailyError) as e:
+        ud.fetch_daily_discharge("01013500", "1989-10-01", "2009-09-30")
+    assert e.value.code == "USGS_HOST_NOT_ALLOWED" and len(seen) == 1
+
+
+def test_transport_and_429(monkeypatch):
+    import requests
+
+    def boom(*a, **k):
+        raise requests.exceptions.ChunkedEncodingError("x")
+    monkeypatch.setattr(requests, "get", boom)
+    with pytest.raises(ud.UsgsDailyError) as e:
+        ud._http_get(ud.BASE + "/collections/daily/items")
+    assert e.value.code == "USGS_TRANSPORT"
+    monkeypatch.setattr(ud, "_http_get", lambda url, params=None: (429, b""))
+    with pytest.raises(ud.UsgsDailyError) as e:
+        ud.fetch_daily_discharge("01013500", "2020-01-01", "2020-01-02")
+    assert e.value.code == "USGS_RATE_LIMITED"
+
+
+def test_unicode_digits_and_missing_time_refused(replay):
+    reg, _ = replay
+    reg("006", data=_mutated("006", lambda f: f[0]["properties"].__setitem__("value", "١٢")))
+    with pytest.raises(ud.UsgsDailyError) as e:
+        ud.fetch_daily_discharge("01013500", "2026-06-19", "2026-10-17")
+    assert e.value.code == "USGS_VALUE_UNPARSEABLE"
+    reg("006", data=_mutated("006", lambda f: f[0]["properties"].pop("time")))
+    with pytest.raises(ud.UsgsDailyError) as e:
+        ud.fetch_daily_discharge("01013500", "2026-06-19", "2026-10-17")
+    assert e.value.code == "USGS_BAD_SCHEMA"
+    with pytest.raises(ud.UsgsDailyError):
+        ud.fetch_daily_discharge("١" * 8, "2020-01-01", "2020-01-02")
+
+
+def test_crosscheck_script_runs():
+    import subprocess, sys, os
+    adapter = Path("/Users/mgalib/Documents/AI-Hydro/.worktrees/v2040-u1b")
+    adapter = Path(os.environ.get("AIHYDRO_DATA_PATH", adapter))
+    if not (adapter / "aihydro_data" / "sources" / "usgs_waterdata.py").exists():
+        pytest.skip("aihydro-data adapter not available")
+    script = Path(__file__).parents[1] / "scripts" / "crosscheck_adapter.py"
+    r = subprocess.run([sys.executable, str(script)], env={**os.environ, "PYTHONPATH": str(adapter)},
+                       capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr[-500:]
+    assert "OK:" in r.stdout
+
+
+# hydrology status
+import geopandas as gpd
+from shapely.geometry import box
+
+
+def _gdf():
+    return gpd.GeoDataFrame(geometry=[box(-69, 47, -68.5, 47.5)], crs="EPSG:4326")
+
+
+def test_hydro_refused_status(monkeypatch, caplog):
+    import camels_attrs.hydrology as h
+
+    def refuse(*a, **k):
+        raise ud.UsgsDailyError("USGS_VALUE_SENTINEL", "sentinel")
+    monkeypatch.setattr(h, "fetch_streamflow_data", refuse)
+    with caplog.at_level("ERROR"):
+        out = h.extract_hydrological_signatures("01013500", _gdf())
+    assert out["hydro_status"] == "refused" and out["hydro_reason"] == "USGS_VALUE_SENTINEL"
+    assert np.isnan(out["q_mean"])
+    assert "USGS_VALUE_SENTINEL" in caplog.text
+
+
+def test_hydro_insufficient_status(monkeypatch):
+    import camels_attrs.hydrology as h
+    df = pd.DataFrame({"q_cms": np.ones(100), "q_native": np.ones(100),
+                       "approval_status": "Approved"}, index=pd.date_range("2000-01-01", periods=100))
+    monkeypatch.setattr(h, "fetch_streamflow_data", lambda *a, **k: df)
+    out = h.extract_hydrological_signatures("01013500", _gdf())
+    assert out["hydro_status"] == "insufficient_data" and out["hydro_reason"] == "LT_365_DAYS"
+
+
+def test_hydro_ok_status_and_provisional_fraction(monkeypatch):
+    import camels_attrs.hydrology as h
+    idx = pd.date_range("2000-01-01", periods=800)
+    ap = np.where(np.arange(800) < 200, "Provisional", "Approved")
+    q = 1 + np.abs(np.sin(np.arange(800) / 20.0))
+    df = pd.DataFrame({"q_cms": q, "q_native": q, "approval_status": ap}, index=idx)
+    df.attrs["null_dropped"] = 3
+    monkeypatch.setattr(h, "fetch_streamflow_data", lambda *a, **k: df)
+    monkeypatch.setattr(h, "fetch_precipitation_data", lambda *a, **k: None)
+    out = h.extract_hydrological_signatures("01013500", _gdf())
+    assert out["hydro_status"] == "ok", out
+    assert out["hydro_provisional_fraction"] == 0.25 and out["hydro_null_dropped"] == 3
+
+
+def test_extractor_flags_non_ok(monkeypatch):
+    import camels_attrs.extractor as ex
+    src = Path(ex.__file__).read_text()
+    assert 'hydro_attrs.get("hydro_status") == "ok"' in src

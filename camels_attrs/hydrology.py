@@ -2,13 +2,31 @@
 Hydrological signatures calculation from streamflow data (CAMELS-Consistent)
 """
 
+import logging
+
 import numpy as np
 import pandas as pd
 import pygridmet as gridmet
 import geopandas as gpd
 from typing import Optional
 
-from .usgs_daily import fetch_daily_discharge
+from .usgs_daily import UsgsDailyError, fetch_daily_discharge
+
+logger = logging.getLogger(__name__)
+
+_SIGNATURE_KEYS = [
+    "q_mean", "q_std", "q5", "q95", "q_median", "baseflow_index",
+    "runoff_ratio", "stream_elas", "slope_fdc",
+    "high_q_freq", "high_q_dur", "low_q_freq", "low_q_dur",
+    "zero_q_freq", "flow_variability", "hfd_mean", "half_flow_date_std",
+]
+
+
+def _hydro_failure(status, reason):
+    out = {k: np.nan for k in _SIGNATURE_KEYS}
+    out.update(hydro_status=status, hydro_reason=reason,
+               hydro_provisional_fraction=np.nan, hydro_null_dropped=np.nan)
+    return out
 
 # ------------------------------
 # Utility Functions (From Reference)
@@ -179,9 +197,15 @@ def extract_hydrological_signatures(
         watershed_geom = watershed_gdf.geometry.iloc[0]
         
         # Fetch streamflow data
-        q_cms = fetch_streamflow_data(gauge_id, start_date, end_date)
-        if q_cms is None or len(q_cms) < 365:
-            raise Exception("Insufficient streamflow data")
+        try:
+            q_df = fetch_streamflow_data(gauge_id, start_date, end_date)
+        except UsgsDailyError as e:
+            logger.error(f"USGS streamflow refused for {gauge_id}: {e}")
+            return _hydro_failure("refused", e.code)
+        q_cms = q_df["q_cms"]
+        if len(q_cms) < 365:
+            logger.error(f"Insufficient streamflow data for {gauge_id}: {len(q_cms)} days")
+            return _hydro_failure("insufficient_data", "LT_365_DAYS")
         
         # Convert to mm/day
         q_mm_day = q_cms * (86.4 / area_km2)
@@ -243,35 +267,32 @@ def extract_hydrological_signatures(
         # --- 6. Timing Statistics (Half Flow Date) ---
         timing_stats = compute_timing_stats_camels(q_mm_day)
         hydro_sigs.update(timing_stats)
-        
+        hydro_sigs["hydro_status"] = "ok"
+        hydro_sigs["hydro_reason"] = ""
+        hydro_sigs["hydro_provisional_fraction"] = float(
+            (q_df["approval_status"] == "Provisional").mean())
+        hydro_sigs["hydro_null_dropped"] = int(q_df.attrs.get("null_dropped", 0))
+
         return hydro_sigs
         
     except Exception as e:
         logger.error(f"Error computing hydrological signatures: {e}")
-        # Return NaNs on failure
-        return {k: np.nan for k in [
-            "q_mean", "q_std", "q5", "q95", "q_median", "baseflow_index",
-            "runoff_ratio", "stream_elas", "slope_fdc", 
-            "high_q_freq", "high_q_dur", "low_q_freq", "low_q_dur",
-            "zero_q_freq", "flow_variability", "hfd_mean", "half_flow_date_std"
-        ]}
+        return _hydro_failure("refused", f"COMPUTE_ERROR: {type(e).__name__}")
 
 
 # ------------------------------
 # Data Fetchers (Wrappers)
 # ------------------------------
 
-def fetch_streamflow_data(gauge_id: str, start_date: str, end_date: str) -> pd.Series:
-    """Fetch daily mean streamflow (m^3/s) from the USGS Water Data API.
+def fetch_streamflow_data(gauge_id: str, start_date: str, end_date: str) -> pd.DataFrame:
+    """Fetch daily mean streamflow from the USGS Water Data API.
 
-    Raises :class:`camels_attrs.usgs_daily.UsgsDailyError` on any failure (empty result,
+    Returns a DataFrame indexed by date with ``q_cms`` (m^3/s), ``q_native`` and
+    ``approval_status`` (Approved / Provisional). Raises
+    :class:`camels_attrs.usgs_daily.UsgsDailyError` on any failure (empty result,
     sentinel / unparseable values, unknown units); it never returns an empty success.
-    The per-day ``approval_status`` is available via ``fetch_daily_discharge``.
     """
-    df = fetch_daily_discharge(gauge_id, start_date, end_date)
-    q_cms = df["q_cms"]
-    q_cms.attrs["approval_status"] = df["approval_status"]
-    return q_cms
+    return fetch_daily_discharge(gauge_id, start_date, end_date)
 
 def fetch_precipitation_data(watershed_geom, start_date, end_date):
     """Fetch GridMET precipitation."""

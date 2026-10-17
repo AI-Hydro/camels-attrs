@@ -20,14 +20,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rounded 0.0283168, a ~7e-8 relative difference); other units are refused.
 - `fetch_streamflow_data` raises `UsgsDailyError` instead of printing and returning `None`;
   an empty result, the `-999999` sentinel, non-finite/unparseable values, unknown
-  `approval_status` or units are explicit errors. `fetch_daily_discharge` exposes the
-  `approval_status` column (Approved / Provisional).
+  `approval_status` or units are explicit errors. `fetch_streamflow_data` now returns a
+  DataFrame (`q_cms`, `q_native`, `approval_status` = Approved / Provisional).
+- The hydrology dict now carries `hydro_status` (`ok` | `refused` | `insufficient_data`),
+  `hydro_reason` (the `UsgsDailyError` code, `LT_365_DAYS`, or `COMPUTE_ERROR: ...`),
+  `hydro_provisional_fraction` and `hydro_null_dropped`. The extractor sets
+  `_status["hydrology"]=False` and adds a `_warnings` entry whenever status is not `ok`
+  (previously an all-NaN result was reported as successfully extracted).
 
 ### Removed
 - `hydrofunctions` dependency (pygeohydro is kept for its other uses).
 
-
 ### Fixed
+- `logger` was undefined in `hydrology.py`, so any error path raised `NameError`.
 - **`q5` / `q95` follow CAMELS (defect P2-D0).** `extract_hydrological_signatures` set `q5`
   to the 95th percentile of daily flow and `q95` to the 5th, the opposite of CAMELS (Addor
   et al. 2017, Table 3: `q5` = 5% flow quantile, low flow; `q95` = 95% flow quantile, high

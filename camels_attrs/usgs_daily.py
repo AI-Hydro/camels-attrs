@@ -40,7 +40,7 @@ LEGACY_SENTINEL = -999999.0
 APPROVAL_CODES = {"Approved": "A", "Provisional": "P"}
 PAGE_LIMIT = 10000
 _MAX_PAGES = 200
-_VALUE_RE = re.compile(r"-?\d+(\.\d+)?([eE][+-]?\d+)?")
+_VALUE_RE = re.compile(r"-?[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?", re.ASCII)
 
 
 class UsgsDailyError(RuntimeError):
@@ -77,6 +77,8 @@ def _http_get(url: str, params: Optional[Mapping[str, Any]] = None):
         raise UsgsDailyError("USGS_TIMEOUT", "timeout talking to api.waterdata.usgs.gov") from e
     except requests.exceptions.ConnectionError as e:
         raise UsgsDailyError("USGS_UNREACHABLE", "cannot reach api.waterdata.usgs.gov") from e
+    except requests.exceptions.RequestException as e:
+        raise UsgsDailyError("USGS_TRANSPORT", f"transport failure: {type(e).__name__}") from e
     return r.status_code, r.content
 
 
@@ -84,7 +86,7 @@ def _site_id(site: str) -> str:
     s = str(site).strip()
     if s.upper().startswith("USGS-"):
         s = s[5:]
-    if not re.fullmatch(r"\d{8,15}", s):
+    if not re.fullmatch(r"[0-9]{8,15}", s, re.ASCII):
         raise UsgsDailyError("USGS_SITE_INVALID", f"{site!r} is not an 8-15 digit USGS site number")
     return f"USGS-{s}"
 
@@ -104,6 +106,8 @@ def _get_json(url: str, params: Optional[Mapping[str, Any]]) -> dict:
     import json
 
     status, body = _http_get(url, params)
+    if status == 429:
+        raise UsgsDailyError("USGS_RATE_LIMITED", "HTTP 429; set API_USGS_PAT or retry later")
     if status != 200:
         raise UsgsDailyError("USGS_HTTP_ERROR", f"HTTP {status} from {urlparse(url).hostname}")
     try:
@@ -142,9 +146,17 @@ def fetch_daily_discharge(gauge_id: str, start_date: str, end_date: str) -> pd.D
     feats = _paged_features(f"{BASE}/collections/daily/items", params)
     if not feats:
         raise UsgsDailyError("USGS_NO_DATA", f"no daily discharge for {sid} in {start_date}..{end_date}")
-    props = [f["properties"] for f in feats]
+    try:
+        props = [f["properties"] for f in feats]
+        for p in props:
+            if not isinstance(p.get("time"), str):
+                raise KeyError("time")
+    except (KeyError, TypeError, AttributeError) as e:
+        raise UsgsDailyError("USGS_BAD_SCHEMA", "a feature lacks properties/time") from e
     if len({p.get("time_series_id") for p in props}) > 1:
-        raise UsgsDailyError("USGS_MULTIPLE_SERIES", f"{sid} returned more than one time series; refusing to guess")
+        raise UsgsDailyError("USGS_MULTIPLE_SERIES", f"{sid} returned more than one time series; refusing to guess "
+                              "(known limitation: this client has no series selector; "
+                              "use the aihydro-data adapter's time_series_id selection)")
     units = {p.get("unit_of_measure") for p in props}
     if len(units) != 1:
         raise UsgsDailyError("USGS_UNIT_UNKNOWN", f"mixed or missing units: {sorted(map(str, units))}")
