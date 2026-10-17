@@ -27,7 +27,7 @@ All core dependencies will be installed automatically:
 - **HyRiver Ecosystem**: pynhd, py3dep, pygridmet, pygeohydro, pygeoutils
 - **Remote Sensing**: pystac-client, planetary-computer
 - **Scientific**: scipy, matplotlib
-- **Hydrology**: hydrofunctions
+- **Hydrology**: built-in USGS Water Data API client (requests)
 
 ## Optional Dependencies
 

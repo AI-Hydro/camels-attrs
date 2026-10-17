@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-10-17
+
+### Changed
+- **USGS streamflow now comes from the Water Data API, not hydrofunctions/NWIS `dv`
+  (Wave U, U3c).** New `camels_attrs/usgs_daily.py` is a minimal stdlib/`requests` client for
+  `https://api.waterdata.usgs.gov/ogcapi/v1/collections/daily/items` (parameter 00060,
+  statistic 00003): `rel=next` paging with https + host checks, redirects never followed,
+  optional `API_USGS_PAT` sent only as `X-Api-Key` and never logged. It deliberately does
+  not import aihydro-data (camels-attrs is the independent reference).
+- Discharge is converted with the exact factor 0.028316846592 m^3/ft^3 (previously the
+  rounded 0.0283168, a ~7e-8 relative difference); other units are refused.
+- `fetch_streamflow_data` raises `UsgsDailyError` instead of printing and returning `None`;
+  an empty result, the `-999999` sentinel, non-finite/unparseable values, unknown
+  `approval_status` or units are explicit errors. `fetch_daily_discharge` exposes the
+  `approval_status` column (Approved / Provisional).
+
+### Removed
+- `hydrofunctions` dependency (pygeohydro is kept for its other uses).
+
+
 ### Fixed
 - **`q5` / `q95` follow CAMELS (defect P2-D0).** `extract_hydrological_signatures` set `q5`
   to the 95th percentile of daily flow and `q95` to the 5th, the opposite of CAMELS (Addor

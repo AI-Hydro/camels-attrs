@@ -4,10 +4,11 @@ Hydrological signatures calculation from streamflow data (CAMELS-Consistent)
 
 import numpy as np
 import pandas as pd
-import hydrofunctions as hf
 import pygridmet as gridmet
 import geopandas as gpd
 from typing import Optional
+
+from .usgs_daily import fetch_daily_discharge
 
 # ------------------------------
 # Utility Functions (From Reference)
@@ -260,20 +261,17 @@ def extract_hydrological_signatures(
 # Data Fetchers (Wrappers)
 # ------------------------------
 
-def fetch_streamflow_data(gauge_id: str, start_date: str, end_date: str) -> Optional[pd.Series]:
-    """Fetch daily streamflow from USGS NWIS."""
-    try:
-        nwis = hf.NWIS(gauge_id, "dv", start_date, end_date)
-        df = nwis.df()
-        if df.empty:
-            return None
-        q_cfs = pd.to_numeric(df.iloc[:, 0], errors="coerce")
-        q_cms = q_cfs * 0.0283168
-        q_cms.index = pd.to_datetime(q_cms.index).tz_localize(None)
-        return q_cms.dropna()
-    except Exception as e:
-        print(f"    ✗ Error fetching streamflow: {e}")
-        return None
+def fetch_streamflow_data(gauge_id: str, start_date: str, end_date: str) -> pd.Series:
+    """Fetch daily mean streamflow (m^3/s) from the USGS Water Data API.
+
+    Raises :class:`camels_attrs.usgs_daily.UsgsDailyError` on any failure (empty result,
+    sentinel / unparseable values, unknown units); it never returns an empty success.
+    The per-day ``approval_status`` is available via ``fetch_daily_discharge``.
+    """
+    df = fetch_daily_discharge(gauge_id, start_date, end_date)
+    q_cms = df["q_cms"]
+    q_cms.attrs["approval_status"] = df["approval_status"]
+    return q_cms
 
 def fetch_precipitation_data(watershed_geom, start_date, end_date):
     """Fetch GridMET precipitation."""
