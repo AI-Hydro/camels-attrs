@@ -212,3 +212,7 @@ prof/
 
 # Package build artifacts
 *.whl
+
+# Recorded offline test fixtures are tracked (override *.json/*.csv above)
+!tests/fixtures/
+!tests/fixtures/**
