@@ -277,7 +277,7 @@ def extract_hydrological_signatures(
         
     except Exception as e:
         logger.error(f"Error computing hydrological signatures: {e}")
-        return _hydro_failure("refused", f"COMPUTE_ERROR: {type(e).__name__}")
+        return _hydro_failure("error", f"COMPUTE_ERROR: {type(e).__name__}")
 
 
 # ------------------------------

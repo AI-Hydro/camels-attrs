@@ -416,3 +416,17 @@ def test_extractor_flags_non_ok(monkeypatch):
     import camels_attrs.extractor as ex
     src = Path(ex.__file__).read_text()
     assert 'hydro_attrs.get("hydro_status") == "ok"' in src
+
+
+def test_hydro_error_status(monkeypatch):
+    import camels_attrs.hydrology as h
+    idx = pd.date_range("2000-01-01", periods=800)
+    df = pd.DataFrame({"q_cms": np.ones(800), "q_native": np.ones(800),
+                       "approval_status": "Approved"}, index=idx)
+    monkeypatch.setattr(h, "fetch_streamflow_data", lambda *a, **k: df)
+
+    def boom(*a, **k):
+        raise ZeroDivisionError("x")
+    monkeypatch.setattr(h, "fetch_precipitation_data", boom)
+    out = h.extract_hydrological_signatures("01013500", _gdf())
+    assert out["hydro_status"] == "error" and out["hydro_reason"] == "COMPUTE_ERROR: ZeroDivisionError"

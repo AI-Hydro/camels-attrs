@@ -22,8 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   an empty result, the `-999999` sentinel, non-finite/unparseable values, unknown
   `approval_status` or units are explicit errors. `fetch_streamflow_data` now returns a
   DataFrame (`q_cms`, `q_native`, `approval_status` = Approved / Provisional).
-- The hydrology dict now carries `hydro_status` (`ok` | `refused` | `insufficient_data`),
-  `hydro_reason` (the `UsgsDailyError` code, `LT_365_DAYS`, or `COMPUTE_ERROR: ...`),
+- The hydrology dict now carries `hydro_status` (`ok` | `refused` | `insufficient_data` | `error`),
+  `hydro_reason` (the `UsgsDailyError` code, `LT_365_DAYS`, or `COMPUTE_ERROR: <ExceptionType>` for status `error`),
   `hydro_provisional_fraction` and `hydro_null_dropped`. The extractor sets
   `_status["hydrology"]=False` and adds a `_warnings` entry whenever status is not `ok`
   (previously an all-NaN result was reported as successfully extracted).
