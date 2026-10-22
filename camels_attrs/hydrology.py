@@ -98,7 +98,7 @@ def compute_slope_fdc_camels(q_vals) -> dict:
     (non-exceedance, linear-interpolation / R type 7) percentiles, zero-flow days kept; NaN unless
     there are >= 100 finite values and ``mean(q) > 0``.
     ``slope_fdc_sawicz2011`` = ``(ln Q33exc - ln Q66exc) / 0.33``, exceedance points taken as
-    non-exceedance quantiles 0.67 and 0.34, zeros dropped, >= 100 positive days (the value that
+    non-exceedance quantiles 0.67 and 0.34, zeros dropped, > 100 positive days (the value that
     was reported as ``slope_fdc`` before 2.0.0).
     """
     q = np.asarray(q_vals, dtype=float)
@@ -107,7 +107,7 @@ def compute_slope_fdc_camels(q_vals) -> dict:
     if q.size >= 100 and float(np.mean(q)) > 0:
         out["slope_fdc"] = float((np.quantile(q, 0.66) - np.quantile(q, 0.33)) / (float(np.mean(q)) * 0.33))
     pos = q[q > 0]
-    if pos.size >= 100:
+    if pos.size > 100:
         q33, q66 = np.quantile(pos, 0.67), np.quantile(pos, 0.34)
         if q66 > 0 and q33 > 0:
             out["slope_fdc_sawicz2011"] = float((np.log(q33) - np.log(q66)) / (0.66 - 0.33))
@@ -138,7 +138,7 @@ SIGNATURE_DEFINITIONS = {
     "slope_fdc_sawicz2011": {
         "formula": "(ln Q33exc - ln Q66exc) / 0.33, Q33exc and Q66exc the flows exceeded 33% and 66% of the time",
         "quantile_type": "exceedance points as non-exceedance quantiles 0.67 and 0.34, linear interpolation (type 7)",
-        "zero_handling": "zero-flow days dropped; needs >= 100 positive days",
+        "zero_handling": "zero-flow days dropped; needs > 100 positive days",
         "log_transform": True,
         "source": "Sawicz et al. (2011), Catchment classification, HESS 15:2895 (the slope of the FDC "
                   "between the 33rd and 66th exceedance percentiles, log space). This is the pre-2.0.0 "
@@ -275,7 +275,7 @@ def extract_hydrological_signatures(
     Returns
     -------
     dict
-        Dictionary of 17 CAMELS hydrological signatures
+        Dictionary of 18 hydrological signatures (the 17 CAMELS ones plus ``slope_fdc_sawicz2011``)
     """
     try:
         # ✅ Extract area and geometry from GeoDataFrame

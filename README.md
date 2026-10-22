@@ -86,7 +86,7 @@ df.to_csv('batch_attributes.csv')
 | **Soil** | 9 | Texture, depth, porosity, conductivity, water content |
 | **Vegetation** | 13 | LAI, NDVI/GVF, land cover fractions, root depth |
 | **Geological** | 7 | Lithology fractions, porosity, permeability |
-| **Hydrological** | 17 | Flow statistics, baseflow, runoff ratio, event characteristics |
+| **Hydrological** | 18 | Flow statistics, baseflow, runoff ratio, event characteristics |
 
 <details>
 <summary>View complete attribute list</summary>

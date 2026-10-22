@@ -98,6 +98,26 @@ def test_kernel_recipe_edge_cases():
     assert bf[:400] == pytest.approx(lyne_hollick_ladson2013(x[:400]))
 
 
+# The M2 provenance string, verbatim. "<=" is "≤" in the critique text, ASCII-ised on purpose.
+M2_PROVENANCE = (
+    "CAMELS-US v1.2 distributed definition. Reproduces the file at <=2.3e-7 relative on 01013500 "
+    "and 01031500, and 9.7e-5 on 01516500. Its zero-structure prediction holds on all 671 basins. "
+    "Source: naddor/camels@88e7a0d2d2 hydro/hydro_signatures.R:97. It contradicts the log-space "
+    "definition in Addor et al. 2017 (text and Table 3). No erratum or release note found. Not "
+    "proven to be the script that produced the file."
+)
+
+
+def test_m2_provenance_string_is_verbatim():
+    assert SIGNATURE_DEFINITIONS["slope_fdc"]["source"] == M2_PROVENANCE
+
+
+def test_sawicz_threshold_is_the_pre_2_0_0_one():
+    # 1.x required len(q_pos) > 100 positive days: 100 positive days -> NaN, 101 -> finite
+    assert np.isnan(compute_slope_fdc_camels(np.linspace(1, 2, 100))["slope_fdc_sawicz2011"])
+    assert np.isfinite(compute_slope_fdc_camels(np.linspace(1, 2, 101))["slope_fdc_sawicz2011"])
+
+
 def test_signature_definitions_carry_source_and_formula():
     d = SIGNATURE_DEFINITIONS
     src = d["slope_fdc"]["source"]
