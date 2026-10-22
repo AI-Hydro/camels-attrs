@@ -10,13 +10,20 @@ import pygridmet as gridmet
 import geopandas as gpd
 from typing import Optional
 
+from .baseflow import (
+    LH_ALPHA,
+    LH_N_REFLECT,
+    LH_PASSES,
+    LYNE_HOLLICK_LADSON2013_REFERENCE,
+    lyne_hollick_ladson2013,
+)
 from .usgs_daily import UsgsDailyError, fetch_daily_discharge
 
 logger = logging.getLogger(__name__)
 
 _SIGNATURE_KEYS = [
     "q_mean", "q_std", "q5", "q95", "q_median", "baseflow_index",
-    "runoff_ratio", "stream_elas", "slope_fdc",
+    "runoff_ratio", "stream_elas", "slope_fdc", "slope_fdc_sawicz2011",
     "high_q_freq", "high_q_dur", "low_q_freq", "low_q_dur",
     "zero_q_freq", "flow_variability", "hfd_mean", "half_flow_date_std",
 ]
@@ -49,32 +56,111 @@ def _consecutive_event_lengths(mask: np.ndarray) -> list:
         lengths.append(run)
     return lengths
 
-def _lyne_hollick_baseflow(q: np.ndarray, alpha: float = 0.925, passes: int = 3) -> np.ndarray:
-    """Lyne–Hollick digital filter. Non-negative constraint."""
+def _lyne_hollick_baseflow(q: np.ndarray, alpha: float = LH_ALPHA, passes: int = LH_PASSES) -> np.ndarray:
+    """Baseflow of ``q`` by the canonical Lyne-Hollick kernel (Ladson et al. 2013, CAMELS recipe).
+
+    Since 2.0.0 this is :func:`camels_attrs.baseflow.lyne_hollick_ladson2013` (BREAKING-VALUE,
+    see CHANGELOG). Before 2.0.0 each sweep clamped ``0 <= b <= q`` and fed the clamped value back
+    into the recursion, with no 30-day reflection; that read 5-19% below CAMELS on the verified
+    basins. ``q`` must be a daily series with NaN for missing days (calendar gaps are segment
+    boundaries); it must be longer than 30 days.
+    """
+    q = np.asarray(q, dtype=float)
     if q.size == 0 or np.all(~np.isfinite(q)):
         return np.full_like(q, np.nan, dtype=float)
+    return np.clip(lyne_hollick_ladson2013(q, alpha=alpha, passes=passes), 0, q)
 
-    def one_pass_forward(x):
-        y = np.zeros_like(x, dtype=float)
-        y[0] = x[0]
-        for t in range(1, len(x)):
-            y[t] = alpha * y[t-1] + (1 + alpha) / 2 * (x[t] - x[t-1])
-            y[t] = min(max(y[t], 0.0), x[t])
-        return y
 
-    def one_pass_backward(x):
-        y = np.zeros_like(x, dtype=float)
-        y[-1] = x[-1]
-        for t in range(len(x) - 2, -1, -1):
-            y[t] = alpha * y[t+1] + (1 + alpha) / 2 * (x[t] - x[t+1])
-            y[t] = min(max(y[t], 0.0), x[t])
-        return y
+def compute_baseflow_index(q: pd.Series) -> float:
+    """CAMELS baseflow index of a daily series: ``sum(baseflow) / sum(q)`` over the days that have a baseflow value.
 
-    bf = q.copy().astype(float)
-    for _ in range(passes):
-        bf = one_pass_forward(bf)
-        bf = one_pass_backward(bf)
-    return np.clip(bf, 0, q)
+    ``q`` is placed on the full daily calendar first so a gap in the record is a segment boundary
+    for the filter and is not spliced. Result clipped to [0, 1]; NaN if the series is too short.
+    """
+    if isinstance(q.index, pd.DatetimeIndex):
+        x = q.sort_index().resample("D").asfreq().to_numpy(dtype=float)
+    else:
+        x = np.asarray(q, dtype=float)
+    if x.size <= LH_N_REFLECT:
+        return float("nan")
+    bf = _lyne_hollick_baseflow(x)
+    ok = np.isfinite(bf) & np.isfinite(x)
+    den = float(np.sum(x[ok]))
+    if not ok.any() or den <= 0:
+        return float("nan")
+    return float(max(0.0, min(1.0, float(np.sum(bf[ok])) / den)))
+
+
+def compute_slope_fdc_camels(q_vals) -> dict:
+    """``slope_fdc`` as distributed in CAMELS-US v1.2, plus the Sawicz et al. (2011) log-space value.
+
+    ``slope_fdc`` = ``(Q66 - Q33) / (mean(q) * 0.33)`` with Q33, Q66 the 33rd and 66th
+    (non-exceedance, linear-interpolation / R type 7) percentiles, zero-flow days kept; NaN unless
+    there are >= 100 finite values and ``mean(q) > 0``.
+    ``slope_fdc_sawicz2011`` = ``(ln Q33exc - ln Q66exc) / 0.33``, exceedance points taken as
+    non-exceedance quantiles 0.67 and 0.34, zeros dropped, > 100 positive days (the value that
+    was reported as ``slope_fdc`` before 2.0.0).
+    """
+    q = np.asarray(q_vals, dtype=float)
+    q = q[np.isfinite(q)]
+    out = {"slope_fdc": np.nan, "slope_fdc_sawicz2011": np.nan}
+    if q.size >= 100 and float(np.mean(q)) > 0:
+        out["slope_fdc"] = float((np.quantile(q, 0.66) - np.quantile(q, 0.33)) / (float(np.mean(q)) * 0.33))
+    pos = q[q > 0]
+    if pos.size > 100:
+        q33, q66 = np.quantile(pos, 0.67), np.quantile(pos, 0.34)
+        if q66 > 0 and q33 > 0:
+            out["slope_fdc_sawicz2011"] = float((np.log(q33) - np.log(q66)) / (0.66 - 0.33))
+    return out
+
+
+_SLOPE_FDC_CAMELS_FILE_SOURCE = (
+    "CAMELS-US v1.2 distributed definition. Reproduces the file at <=2.3e-7 relative on 01013500 "
+    "and 01031500, and 9.7e-5 on 01516500. Its zero-structure prediction holds on all 671 basins. "
+    "Source: naddor/camels@88e7a0d2d2 hydro/hydro_signatures.R:97. It contradicts the log-space "
+    "definition in Addor et al. 2017 (text and Table 3). No erratum or release note found. Not "
+    "proven to be the script that produced the file."
+)
+
+#: Machine-readable definition of every hydrology signature whose meaning is a choice, so a
+#: consumer can tell whether two numbers with the same name are the same quantity.
+SIGNATURE_DEFINITIONS = {
+    "slope_fdc": {
+        "formula": "(Q66 - Q33) / (mean(q) * 0.33), Q66 and Q33 the 66th and 33rd percentiles of q",
+        "quantile_type": "non-exceedance, linear interpolation (R type 7; numpy default)",
+        "zero_handling": "zero-flow days kept; defined only when mean(q) > 0",
+        "log_transform": False,
+        "source": _SLOPE_FDC_CAMELS_FILE_SOURCE,
+        "evidence": "docs/vision-2040/evidence/signature-definitions-1 (AI-Hydro workspace)",
+        "comparable_to": "CAMELS-US v1.2 slope_fdc column only; not the Sawicz et al. (2011) signature "
+                         "and not necessarily the same quantity as 'slope_fdc' in other CAMELS datasets",
+    },
+    "slope_fdc_sawicz2011": {
+        "formula": "(ln Q33exc - ln Q66exc) / 0.33, Q33exc and Q66exc the flows exceeded 33% and 66% of the time",
+        "quantile_type": "exceedance points as non-exceedance quantiles 0.67 and 0.34, linear interpolation (type 7)",
+        "zero_handling": "zero-flow days dropped; needs > 100 positive days",
+        "log_transform": True,
+        "source": "Sawicz et al. (2011), Catchment classification, HESS 15:2895 (the slope of the FDC "
+                  "between the 33rd and 66th exceedance percentiles, log space). This is the pre-2.0.0 "
+                  "camels-attrs 'slope_fdc' value. The Addor et al. (2017) text variant (ln, non-exceedance "
+                  ".66/.33, zeros kept) is a different number.",
+    },
+    "baseflow_index": {
+        "formula": "sum(baseflow) / sum(q)",
+        "method": "lyne_hollick_ladson2013",
+        "parameters": {"alpha": LH_ALPHA, "passes": LH_PASSES, "n_reflect": LH_N_REFLECT},
+        "zero_handling": "baseflow clipped at zero; quick flow subtracted only where positive; "
+                         "30-day reflection at both ends",
+        "source": LYNE_HOLLICK_LADSON2013_REFERENCE,
+        "evidence": "docs/vision-2040/evidence/signature-definitions-1 (CAMELS v1.2 reproduced to <=2e-6 relative)",
+    },
+    "high_q_freq": {"formula": "days with q > 9 * median(q), divided by available days, times 365.25",
+                    "units": "days/year", "source": "Addor et al. (2017) Table 3; naddor/camels compute_hf_freq_dur"},
+    "low_q_freq": {"formula": "days with q <= 0.2 * mean(q), divided by available days, times 365.25",
+                   "units": "days/year", "source": "Addor et al. (2017) Table 3; naddor/camels compute_lf_freq_dur"},
+    "zero_q_freq": {"formula": "days with q <= 0, divided by available days", "units": "fraction",
+                    "source": "naddor/camels compute_no_flow (sum(q<=0)/length)"},
+}
 
 def _align_daily(q_series: pd.Series, p_series: pd.Series, min_days: int = 365):
     """Align to common daily index (naive datetime), drop NaNs."""
@@ -189,7 +275,7 @@ def extract_hydrological_signatures(
     Returns
     -------
     dict
-        Dictionary of 17 CAMELS hydrological signatures
+        Dictionary of 18 hydrological signatures (the 17 CAMELS ones plus ``slope_fdc_sawicz2011``)
     """
     try:
         # ✅ Extract area and geometry from GeoDataFrame
@@ -224,25 +310,17 @@ def extract_hydrological_signatures(
         hydro_sigs["q_median"] = float(np.median(q_vals))
         
         # --- 2. Baseflow Index ---
-        baseflow = _lyne_hollick_baseflow(q_vals)
-        bfi = float(np.nansum(baseflow) / np.nansum(q_vals)) if np.nansum(q_vals) > 0 else np.nan
-        hydro_sigs["baseflow_index"] = max(0.0, min(1.0, bfi)) if np.isfinite(bfi) else np.nan
+        # Ladson et al. (2013) kernel, as CAMELS (BREAKING-VALUE vs camels-attrs < 2.0.0).
+        hydro_sigs["baseflow_index"] = compute_baseflow_index(q_mm_day)
         
         # --- 3. Water Balance (Elasticity & Runoff Ratio) ---
         wb_stats = compute_water_balance_camels(q_mm_day, p_series)
         hydro_sigs.update(wb_stats)
         
         # --- 4. Flow Duration Curve Slope ---
-        # Log slope between 33% and 66% exceedance
-        q_pos = q_vals[q_vals > 0]
-        if len(q_pos) > 100:
-            q33, q66 = np.quantile(q_pos, 0.67), np.quantile(q_pos, 0.34)
-            if q66 > 0 and q33 > 0:
-                hydro_sigs["slope_fdc"] = float((np.log(q33) - np.log(q66)) / (0.66 - 0.33))
-            else:
-                hydro_sigs["slope_fdc"] = np.nan
-        else:
-            hydro_sigs["slope_fdc"] = np.nan
+        # slope_fdc = CAMELS-US v1.2 file definition (BREAKING-VALUE vs camels-attrs < 2.0.0);
+        # the old log-space value is slope_fdc_sawicz2011. See SIGNATURE_DEFINITIONS.
+        hydro_sigs.update(compute_slope_fdc_camels(q_vals))
         
         # --- 5. Event Statistics ---
         mean_q = np.mean(q_vals)
@@ -258,8 +336,8 @@ def extract_hydrological_signatures(
         hydro_sigs["low_q_freq"] = float(np.sum(low_mask) / len(q_vals) * 365.25)
         hydro_sigs["low_q_dur"] = float(np.mean(_consecutive_event_lengths(low_mask))) if np.any(low_mask) else np.nan
         
-        # Zero flow frequency (fraction, dimensionless)
-        hydro_sigs["zero_q_freq"] = float(np.sum(q_vals == 0) / len(q_vals))
+        # Zero flow frequency (fraction, dimensionless); CAMELS compute_no_flow counts q <= 0
+        hydro_sigs["zero_q_freq"] = float(np.sum(q_vals <= 0) / len(q_vals))
         
         # Flow variability (coefficient of variation)
         hydro_sigs["flow_variability"] = float(np.std(q_vals) / mean_q) if mean_q > 0 else np.nan
@@ -327,13 +405,15 @@ HYDRO_SIGNATURE_UNITS = {
     "baseflow_index": "–",
     "runoff_ratio": "–",
     "stream_elas": "–",
-    "high_q_freq": "events/yr",
+    "high_q_freq": "days/yr",
     "high_q_dur": "days",
-    "low_q_freq": "events/yr",
+    "low_q_freq": "days/yr",
     "low_q_dur": "days",
     "zero_q_freq": "–",
     "flow_variability": "–",
     "hfd_mean": "day-of-year",
     "half_flow_date_std": "days",
-    "slope_fdc": "log-slope"
+    # (Q66 - Q33) / (mean(q) * 0.33), the CAMELS-US v1.2 file definition (not a log slope since 2.0.0)
+    "slope_fdc": "–",
+    "slope_fdc_sawicz2011": "log-slope",
 }

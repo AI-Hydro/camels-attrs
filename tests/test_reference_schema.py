@@ -23,6 +23,7 @@ EXPECTED_HYDRO_SIGNATURES = {
     "hfd_mean",
     "half_flow_date_std",
     "slope_fdc",
+    "slope_fdc_sawicz2011",
 }
 
 EXPECTED_SOIL_ATTRIBUTES = {

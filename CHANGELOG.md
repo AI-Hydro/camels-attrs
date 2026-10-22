@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-10-22
+
+### BREAKING-VALUE: `slope_fdc` and `baseflow_index` change definition (Science Wave 3, PR-5)
+
+Same keys, different numbers. Do not compare 1.x and 2.0 values of these two attributes, and re-run anything that cached them.
+
+- **`slope_fdc` is now the CAMELS-US v1.2 file definition**, `(Q66 - Q33) / (mean(q) * 0.33)`: non-exceedance (R type 7) percentiles, zero-flow days kept, defined only when `mean(q) > 0` and >= 100 values (`slope_fdc_sawicz2011` keeps the 1.x threshold of > 100 positive days). It reproduces the distributed `camels_hydro.txt` column to <= 1e-6 relative on 01013500 and 01031500 (observed 8.8e-9 and 2.3e-7). 1.x returned the log-space value `(ln Q33exc - ln Q66exc) / 0.33` (zeros dropped), which is 76% (01013500) and 124% (01031500) above the file value. The old value is kept as the new key **`slope_fdc_sawicz2011`**; its unit is `log-slope`, `slope_fdc` is now dimensionless.
+  Provenance: "CAMELS-US v1.2 distributed definition. Reproduces the file at <=2.3e-7 relative on 01013500 and 01031500, and 9.7e-5 on 01516500. Its zero-structure prediction holds on all 671 basins. Source: naddor/camels@88e7a0d2d2 hydro/hydro_signatures.R:97. It contradicts the log-space definition in Addor et al. 2017 (text and Table 3). No erratum or release note found. Not proven to be the script that produced the file." Do not read this as "the CAMELS definition" for other CAMELS datasets (CAMELS-GB used the log `sfdc_sawicz_2011`).
+- **`baseflow_index` uses a faithful Ladson et al. (2013) Lyne-Hollick port** (`camels_attrs/baseflow.py`: alpha 0.925, forward-backward-forward, 30-day reflection at both ends, quick flow subtracted only where positive, baseflow clipped at zero, NaN gaps are segment boundaries, > 30 days required, `WarmupBiasWarning` below 365 days). The 1.x filter clamped `0 <= b <= q` at every step and fed the clamped value back; it read low against CAMELS. New values reproduce the file to <= 1e-5 relative (observed 1.1e-7 on 01013500, 1.9e-6 on 01031500). The kernel is a port of `aihydro_watershed.signatures.baseflow.lyne_hollick_ladson2013` (watershed 0.2.0), pinned by a test to that kernel's documented outputs; camels-attrs does not import any aihydro package. `_lyne_hollick_baseflow` is kept as a thin wrapper over the new kernel.
+- **`zero_q_freq` counts days with `q <= 0`** (was `q == 0`), as CAMELS `compute_no_flow`. `high_q_freq` / `low_q_freq` were already days/yr (`> 9 * median`, `<= 0.2 * mean`, over available days, x 365.25); `HYDRO_SIGNATURE_UNITS` said `events/yr`, now `days/yr`.
+- New `camels_attrs.hydrology.SIGNATURE_DEFINITIONS` (formula, quantile type, zero handling, source, evidence) and `compute_slope_fdc_camels`, `compute_baseflow_index`.
+
+### Tests
+- `tests/test_signature_definitions.py`: slope_fdc within 1e-6 and baseflow_index within 1e-5 of CAMELS-US v1.2 on 01013500 and 01031500 (USGS fixtures under `tests/fixtures/signature_definitions/`, provenance in its README), kernel pinned to watershed 0.2.0 outputs, extractor end-to-end offline (days/yr, fraction definitions).
+- `tests/test_hydrology.py`: the 7-point filter test now uses a 120-day series (the kernel needs > 30 days).
+
+### Known limitation (not fixed here)
+- Climate extraction calls `pygridmet` / `pydaymet` without response validation (no duplicate-timestamp, gap or year-coverage check) and outside the aihydro-data layer's calendar and cache protections. The data-layer fix lives in aihydro-data 0.2.5; camels-attrs is not yet routed through it.
+
 ## [1.0.4] - 2026-10-17
 
 ### Changed
