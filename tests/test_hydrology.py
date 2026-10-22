@@ -23,7 +23,9 @@ def test_consecutive_event_lengths():
     assert _consecutive_event_lengths(mask_empty) == []
 
 def test_lyne_hollick_baseflow():
-    q = np.array([10, 12, 15, 20, 15, 12, 10])
+    # needs > 30 days (30-day reflection, as BFI.R): a storm on a slowly receding base
+    t = np.arange(120, dtype=float)
+    q = 10.0 * np.exp(-t / 80.0) + np.where((t >= 50) & (t < 60), 30.0 * np.exp(-(t - 50) / 3.0), 0.0)
     bf = _lyne_hollick_baseflow(q, alpha=0.925, passes=3)
     
     # Baseflow should be <= streamflow

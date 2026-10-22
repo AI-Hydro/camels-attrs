@@ -2,8 +2,8 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 type: software
 title: "camels-attrs: A Python Package for Extracting CAMELS-like Catchment Attributes"
-version: "1.0.4"
-date-released: "2026-10-17"
+version: "2.0.0"
+date-released: "2026-10-22"
 license: MIT
 repository-code: "https://github.com/AI-Hydro/camels-attrs"
 url: "https://github.com/AI-Hydro/camels-attrs"
@@ -47,7 +47,7 @@ preferred-citation:
       email: vmerwade@purdue.edu
       affiliation: "Lyles School of Civil Engineering, Purdue University"
       orcid: "https://orcid.org/0000-0001-5518-2890"
-  version: "1.0.4"
-  date-released: "2026-10-17"
+  version: "2.0.0"
+  date-released: "2026-10-22"
   license: MIT
   repository-code: "https://github.com/AI-Hydro/camels-attrs"

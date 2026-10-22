@@ -107,7 +107,11 @@ Sand/silt/clay fractions, `soil_depth_pelletier`, `soil_depth_statsgo`, `soil_po
 Lithology fractions (siliciclastic, carbonate, etc.), `geol_porosity`, `geol_permeability`
 
 ### Hydrology
-`q_mean`, `runoff_ratio`, `baseflow_index`, `stream_elas`, `slope_fdc`, `flow_variability`, `high_q_freq`, `high_q_dur`, `low_q_freq`, `low_q_dur`, `zero_q_freq`, `hfd_mean`, `half_flow_date_std`
+`q_mean`, `runoff_ratio`, `baseflow_index`, `stream_elas`, `slope_fdc`, `slope_fdc_sawicz2011`, `flow_variability`, `high_q_freq`, `high_q_dur`, `low_q_freq`, `low_q_dur`, `zero_q_freq`, `hfd_mean`, `half_flow_date_std`
+
+**Definitions (2.0.0).** `slope_fdc` is the CAMELS-US v1.2 file definition, `(Q66 - Q33) / (mean(q) * 0.33)` (non-exceedance type-7 quantiles, zero-flow days kept; reproduces the file to 1e-6). The log-space value that `slope_fdc` reported in 1.x is `slope_fdc_sawicz2011`. `baseflow_index` uses the Ladson et al. (2013) Lyne-Hollick recipe CAMELS applied (reproduces the file to 1e-5). `high_q_freq` and `low_q_freq` are days/yr; `zero_q_freq` is the fraction of days with q <= 0. `camels_attrs.hydrology.SIGNATURE_DEFINITIONS` carries the formula, quantile type, zero handling and source of each. Values from 1.x are not comparable for `slope_fdc` and `baseflow_index`; see the CHANGELOG.
+
+**Known limitation.** Climate (GridMET precipitation, `pygridmet`) and Daymet (`pydaymet`) are called without response validation and outside the aihydro-data layer's calendar/cache checks. A silently incomplete or mis-dated climate record can reach `runoff_ratio`, `stream_elas` and the climate attributes. Not fixed here; the validated data path lives in aihydro-data (0.2.5).
 
 </details>
 

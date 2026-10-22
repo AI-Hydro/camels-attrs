@@ -9,7 +9,7 @@ Author: Mohammad Galib
 Email: mgalib@purdue.edu
 """
 
-__version__ = "1.0.4"
+__version__ = "2.0.0"
 __author__ = "Mohammad Galib"
 __email__ = "mgalib@purdue.edu"
 
