@@ -92,7 +92,7 @@ def compute_baseflow_index(q: pd.Series) -> float:
 
 
 def compute_slope_fdc_camels(q_vals) -> dict:
-    """``slope_fdc`` as distributed in CAMELS-US v1.2, plus the Sawicz et al. (2011) log-space value.
+    """``slope_fdc`` as distributed in CAMELS attributes v2.0, plus the Sawicz et al. (2011) log-space value.
 
     ``slope_fdc`` = ``(Q66 - Q33) / (mean(q) * 0.33)`` with Q33, Q66 the 33rd and 66th
     (non-exceedance, linear-interpolation / R type 7) percentiles, zero-flow days kept; NaN unless
@@ -116,7 +116,7 @@ def compute_slope_fdc_camels(q_vals) -> dict:
 
 _SLOPE_FDC_CAMELS_FILE_SOURCE = (
     "slope of the flow duration curve between the 33rd and 66th percentiles, mean-normalised, as in "
-    "the CAMELS-US v1.2 distributed file (naddor/camels@88e7a0d2d2 hydro/hydro_signatures.R:97). "
+    "the CAMELS attributes v2.0 distributed file `camels_hydro.txt` (naddor/camels@88e7a0d2d2 hydro/hydro_signatures.R:97). "
     "Reproduces the file at <=2.3e-7 relative on 01013500 and 01031500, and 9.7e-5 on 01516500. "
     "Its zero-structure prediction holds on all 671 basins. Not proven to be the script that "
     "produced the file."
@@ -132,7 +132,7 @@ SIGNATURE_DEFINITIONS = {
         "log_transform": False,
         "source": _SLOPE_FDC_CAMELS_FILE_SOURCE,
         "evidence": "docs/vision-2040/evidence/signature-definitions-1 (AI-Hydro workspace)",
-        "comparable_to": "CAMELS-US v1.2 slope_fdc column only; not the Sawicz et al. (2011) signature "
+        "comparable_to": "CAMELS attributes v2.0 slope_fdc column only; not the Sawicz et al. (2011) signature "
                          "and not necessarily the same quantity as 'slope_fdc' in other CAMELS datasets",
     },
     "slope_fdc_sawicz2011": {
@@ -149,7 +149,7 @@ SIGNATURE_DEFINITIONS = {
         "zero_handling": "baseflow clipped at zero; quick flow subtracted only where positive; "
                          "30-day reflection at both ends",
         "source": LYNE_HOLLICK_LADSON2013_REFERENCE,
-        "evidence": "docs/vision-2040/evidence/signature-definitions-1 (CAMELS v1.2 reproduced to <=2e-6 relative)",
+        "evidence": "docs/vision-2040/evidence/signature-definitions-1 (CAMELS attributes v2.0 reproduced to <=2e-6 relative)",
     },
     "high_q_freq": {"formula": "days with q > 9 * median(q), divided by available days, times 365.25",
                     "units": "days/year", "source": "Addor et al. (2017) Table 3; naddor/camels compute_hf_freq_dur"},
@@ -315,7 +315,7 @@ def extract_hydrological_signatures(
         hydro_sigs.update(wb_stats)
         
         # --- 4. Flow Duration Curve Slope ---
-        # slope_fdc = CAMELS-US v1.2 file definition (BREAKING-VALUE vs camels-attrs < 2.0.0);
+        # slope_fdc = CAMELS attributes v2.0 file definition (BREAKING-VALUE vs camels-attrs < 2.0.0);
         # the old log-space value is slope_fdc_sawicz2011. See SIGNATURE_DEFINITIONS.
         hydro_sigs.update(compute_slope_fdc_camels(q_vals))
         
@@ -410,7 +410,7 @@ HYDRO_SIGNATURE_UNITS = {
     "flow_variability": "–",
     "hfd_mean": "day-of-year",
     "half_flow_date_std": "days",
-    # (Q66 - Q33) / (mean(q) * 0.33), the CAMELS-US v1.2 file definition (not a log slope since 2.0.0)
+    # (Q66 - Q33) / (mean(q) * 0.33), the CAMELS attributes v2.0 file definition (not a log slope since 2.0.0)
     "slope_fdc": "–",
     "slope_fdc_sawicz2011": "log-slope",
 }

@@ -1,6 +1,6 @@
-"""camels-attrs 2.0.0: slope_fdc and baseflow_index follow the CAMELS-US v1.2 definitions.
+"""camels-attrs 2.0.0: slope_fdc and baseflow_index follow the CAMELS attributes v2.0 definitions.
 
-Locked references: CAMELS-US v1.2 ``camels_hydro.txt`` (Zenodo 15529996, md5-verified; values
+Locked references: CAMELS attributes v2.0 ``camels_hydro.txt`` (Zenodo 15529996, md5-verified; values
 quoted in docs/vision-2040/evidence/signature-definitions-1 of the AI-Hydro workspace).
 Streamflow fixtures are USGS daily series, WY1990-2009, 7305 days (see
 tests/fixtures/signature_definitions/README.md). Offline.
@@ -100,7 +100,7 @@ def test_kernel_recipe_edge_cases():
 
 # The neutral provenance string (PD-F2), verbatim. "<=" is ASCII on purpose.
 M2_PROVENANCE = (
-    "slope of the flow duration curve between the 33rd and 66th percentiles, mean-normalised, as in the CAMELS-US v1.2 distributed file (naddor/camels@88e7a0d2d2 hydro/hydro_signatures.R:97). Reproduces the file at <=2.3e-7 relative on 01013500 and 01031500, and 9.7e-5 on 01516500. Its zero-structure prediction holds on all 671 basins. Not proven to be the script that produced the file."
+    "slope of the flow duration curve between the 33rd and 66th percentiles, mean-normalised, as in the CAMELS attributes v2.0 distributed file `camels_hydro.txt` (naddor/camels@88e7a0d2d2 hydro/hydro_signatures.R:97). Reproduces the file at <=2.3e-7 relative on 01013500 and 01031500, and 9.7e-5 on 01516500. Its zero-structure prediction holds on all 671 basins. Not proven to be the script that produced the file."
 )
 
 
