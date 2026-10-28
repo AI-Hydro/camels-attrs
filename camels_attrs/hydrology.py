@@ -115,11 +115,11 @@ def compute_slope_fdc_camels(q_vals) -> dict:
 
 
 _SLOPE_FDC_CAMELS_FILE_SOURCE = (
-    "CAMELS-US v1.2 distributed definition. Reproduces the file at <=2.3e-7 relative on 01013500 "
-    "and 01031500, and 9.7e-5 on 01516500. Its zero-structure prediction holds on all 671 basins. "
-    "Source: naddor/camels@88e7a0d2d2 hydro/hydro_signatures.R:97. It contradicts the log-space "
-    "definition in Addor et al. 2017 (text and Table 3). No erratum or release note found. Not "
-    "proven to be the script that produced the file."
+    "slope of the flow duration curve between the 33rd and 66th percentiles, mean-normalised, as in "
+    "the CAMELS-US v1.2 distributed file (naddor/camels@88e7a0d2d2 hydro/hydro_signatures.R:97). "
+    "Reproduces the file at <=2.3e-7 relative on 01013500 and 01031500, and 9.7e-5 on 01516500. "
+    "Its zero-structure prediction holds on all 671 basins. Not proven to be the script that "
+    "produced the file."
 )
 
 #: Machine-readable definition of every hydrology signature whose meaning is a choice, so a
@@ -140,10 +140,7 @@ SIGNATURE_DEFINITIONS = {
         "quantile_type": "exceedance points as non-exceedance quantiles 0.67 and 0.34, linear interpolation (type 7)",
         "zero_handling": "zero-flow days dropped; needs > 100 positive days",
         "log_transform": True,
-        "source": "Sawicz et al. (2011), Catchment classification, HESS 15:2895 (the slope of the FDC "
-                  "between the 33rd and 66th exceedance percentiles, log space). This is the pre-2.0.0 "
-                  "camels-attrs 'slope_fdc' value. The Addor et al. (2017) text variant (ln, non-exceedance "
-                  ".66/.33, zeros kept) is a different number.",
+        "source": "log-space FDC slope (Sawicz et al. 2011). This is the pre-2.0.0 camels-attrs 'slope_fdc' value.",
     },
     "baseflow_index": {
         "formula": "sum(baseflow) / sum(q)",
