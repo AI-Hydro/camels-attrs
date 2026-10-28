@@ -14,6 +14,6 @@ Byte-identical copies of `aihydro-watershed` `tests/fixtures/served_streamflow_*
 2026-06-17); `01013500` is the series served in the watershed e2e proof 1. Source: USGS National Water
 Information System, https://waterdata.usgs.gov/nwis.
 
-Reference values (CAMELS-US v1.2 `camels_hydro.txt`, Zenodo 15529996, md5 55ebdeb36c42ee7acdb998229c3edb3a):
+Reference values (CAMELS attributes v2.0 `camels_hydro.txt`, Zenodo 15529996, md5 55ebdeb36c42ee7acdb998229c3edb3a):
 01013500 slope_fdc 1.52821853538976, baseflow_index 0.585225955779508;
 01031500 slope_fdc 1.49401920331253, baseflow_index 0.445090526012048.

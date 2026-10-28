@@ -1,6 +1,6 @@
-"""camels-attrs 2.0.0: slope_fdc and baseflow_index follow the CAMELS-US v1.2 definitions.
+"""camels-attrs 2.0.0: slope_fdc and baseflow_index follow the CAMELS attributes v2.0 definitions.
 
-Locked references: CAMELS-US v1.2 ``camels_hydro.txt`` (Zenodo 15529996, md5-verified; values
+Locked references: CAMELS attributes v2.0 ``camels_hydro.txt`` (Zenodo 15529996, md5-verified; values
 quoted in docs/vision-2040/evidence/signature-definitions-1 of the AI-Hydro workspace).
 Streamflow fixtures are USGS daily series, WY1990-2009, 7305 days (see
 tests/fixtures/signature_definitions/README.md). Offline.
@@ -98,14 +98,16 @@ def test_kernel_recipe_edge_cases():
     assert bf[:400] == pytest.approx(lyne_hollick_ladson2013(x[:400]))
 
 
-# The M2 provenance string, verbatim. "<=" is "≤" in the critique text, ASCII-ised on purpose.
+# The neutral provenance string (PD-F2), verbatim. "<=" is ASCII on purpose.
 M2_PROVENANCE = (
-    "CAMELS-US v1.2 distributed definition. Reproduces the file at <=2.3e-7 relative on 01013500 "
-    "and 01031500, and 9.7e-5 on 01516500. Its zero-structure prediction holds on all 671 basins. "
-    "Source: naddor/camels@88e7a0d2d2 hydro/hydro_signatures.R:97. It contradicts the log-space "
-    "definition in Addor et al. 2017 (text and Table 3). No erratum or release note found. Not "
-    "proven to be the script that produced the file."
+    "slope of the flow duration curve between the 33rd and 66th percentiles, mean-normalised, as in the CAMELS attributes v2.0 distributed file `camels_hydro.txt` (naddor/camels@88e7a0d2d2 hydro/hydro_signatures.R:97). Reproduces the file at <=2.3e-7 relative on 01013500 and 01031500. Not proven to be the script that produced the file."
 )
+
+
+def test_slope_fdc_value_unchanged_by_rewording_01013500():
+    # pinned from the 2.0.0 release code before the 2.0.1 wording-only change
+    out = compute_slope_fdc_camels(_q("01013500").to_numpy())
+    assert out["slope_fdc"] == pytest.approx(1.5282185220180324, rel=1e-12)
 
 
 def test_m2_provenance_string_is_verbatim():

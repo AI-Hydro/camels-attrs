@@ -5,7 +5,7 @@ Faithful port of ``aihydro_watershed.signatures.baseflow.lyne_hollick_ladson2013
 (aihydro-watershed 0.2.0), which in turn follows TonyLadson/BaseflowSeparation_LyneHollick
 ``BFI.R`` and naddor/camels ``comp_i_bf_landson``. camels-attrs is the standalone reference
 implementation and must not import the aihydro packages, so the kernel is ported, not imported;
-``tests/test_signature_definitions.py`` pins it to CAMELS-US v1.2 and to the watershed kernel's
+``tests/test_signature_definitions.py`` pins it to CAMELS attributes v2.0 and to the watershed kernel's
 documented outputs (docs/vision-2040/evidence/signature-definitions-1 in the AI-Hydro workspace).
 
 Recipe: alpha 0.925; three alternating sweeps (forward, backward, forward); the series is
@@ -74,7 +74,7 @@ def _ladson_segment(q, alpha, passes, n_reflect):
 def lyne_hollick_ladson2013(streamflow, alpha=LH_ALPHA, passes=LH_PASSES, n_reflect=LH_N_REFLECT):
     """Canonical Lyne-Hollick baseflow filter (Ladson et al. 2013; CAMELS ``comp_i_bf_landson``).
 
-    Reproduces the CAMELS v1.2 baseflow index to <= 2e-6 relative on 01013500 and 01031500.
+    Reproduces the CAMELS attributes v2.0 baseflow index to <= 2e-6 relative on 01013500 and 01031500.
 
     A series of 31-364 days is computed but emits ``WarmupBiasWarning``; a series of 30 days or
     fewer raises ``ValueError``, as BFI.R does.
