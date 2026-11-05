@@ -36,7 +36,7 @@ def extract_topographic_attributes(watershed_geom, resolution=30):
     Notes
     -----
     ``slope_mean`` / ``slope_std`` are in m/km (= 10 x percent). Through 2.0.1 they were in
-    percent under the same key names; see CHANGELOG ("slope_mean / slope_std units").
+    percent under the same key names; see CHANGELOG ("BREAKING-VALUE: slope_mean and slope_std are now m/km (were percent), values x10").
     These are CAMELS-like, not CAMELS-identical: CAMELS takes slope from N15 ("USGS data"),
     whose DEM and method are not stated, so this 30 m 3DEP slope is expected to read higher.
 
