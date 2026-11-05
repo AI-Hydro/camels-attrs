@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `install-alone` CI workflow (AGU ecosystem audit C1, "independently usable"): builds the wheel, installs only it in a fresh venv outside
+  the checkout, and runs `scripts/install_alone_check.py` with every socket connection refused. Task:  CAMELS flow quantiles, runoff ratio and elasticity, and baseflow index against hand-derived expectations, plus the `camels-extract` entry point. No code change; no version bump.
+
 ## [2.0.1] - 2026-10-28
 
 ### Changed
