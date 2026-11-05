@@ -204,7 +204,7 @@ def create_comprehensive_watershed_map(
         stats_text += f"  • Area: {attributes.get('area_geospa_fabric', 0):.1f} km²\n"
         stats_text += f"  • Elev (mean): {attributes.get('elev_mean', 0):.1f} m\n"
         stats_text += f"  • Elev (range): {attributes.get('elev_min', 0):.0f}-{attributes.get('elev_max', 0):.0f} m\n"
-        stats_text += f"  • Slope (mean): {attributes.get('slope_mean', 0):.1f}%\n\n"
+        stats_text += f"  • Slope (mean): {attributes.get('slope_mean', 0):.1f} m/km\n\n"
         
         stats_text += f"🌦️ CLIMATE\n"
         stats_text += f"  • Precip: {attributes.get('p_mean', 0):.2f} mm/day\n"

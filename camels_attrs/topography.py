@@ -6,6 +6,9 @@ import py3dep
 import xrspatial
 import geopandas as gpd
 
+# tan(slope) [m/m] x 1000 = m/km. Through camels-attrs 2.0.1 the factor was 100 (percent) under the same keys.
+SLOPE_M_PER_KM_FACTOR = 1000.0
+
 
 def extract_topographic_attributes(watershed_geom, resolution=30):
     """
@@ -26,10 +29,17 @@ def extract_topographic_attributes(watershed_geom, resolution=30):
         - elev_min: minimum elevation (m)
         - elev_max: maximum elevation (m)
         - elev_std: elevation standard deviation (m)
-        - slope_mean: mean slope (%)
-        - slope_std: slope standard deviation (%)
+        - slope_mean: mean slope, tan(slope) x 1000 (m/km, the CAMELS unit)
+        - slope_std: slope standard deviation, same unit (m/km)
         - area_geospa_fabric: drainage area (km²)
     
+    Notes
+    -----
+    ``slope_mean`` / ``slope_std`` are in m/km (= 10 x percent). Through 2.0.1 they were in
+    percent under the same key names; see CHANGELOG ("slope_mean / slope_std units").
+    These are CAMELS-like, not CAMELS-identical: CAMELS takes slope from N15 ("USGS data"),
+    whose DEM and method are not stated, so this 30 m 3DEP slope is expected to read higher.
+
     Raises
     ------
     Exception
@@ -42,8 +52,8 @@ def extract_topographic_attributes(watershed_geom, resolution=30):
         
         # Compute slope
         slope_deg = xrspatial.slope(dem_proj)
-        slope_mpm = py3dep.deg2mpm(slope_deg)
-        slope_pct = slope_mpm * 100
+        slope_mpm = py3dep.deg2mpm(slope_deg)  # tan(slope), m per m
+        slope_mkm = slope_mpm * SLOPE_M_PER_KM_FACTOR  # m/km, the CAMELS slope_mean unit
         
         # Calculate elevation statistics
         elevation_stats = {
@@ -55,8 +65,8 @@ def extract_topographic_attributes(watershed_geom, resolution=30):
         
         # Calculate slope statistics
         slope_stats = {
-            "slope_mean": float(slope_pct.mean().values),
-            "slope_std": float(slope_pct.std().values),
+            "slope_mean": float(slope_mkm.mean().values),
+            "slope_std": float(slope_mkm.std().values),
         }
         
         # Calculate drainage area
