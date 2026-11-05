@@ -15,6 +15,10 @@ Task: CAMELS flow signatures with analytic expectations, from synthetic series.
 
 Nothing here is a hydrological result; every expectation is derived by hand
 from the definition, and the data are synthetic.
+
+Socket block: an IN-PROCESS patch of the Python ``socket`` module (connect, create_connection,
+getaddrinfo). It does not cover child processes or C libraries that open sockets themselves, so
+it is evidence that this Python code made no network call, not an OS-level sandbox.
 """
 from __future__ import annotations
 
