@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-11-07 BREAKING-VALUE
+
+### BREAKING-VALUE: `slope_mean` and `slope_std` are now m/km (were percent), values x10
+
+Same keys, values 10 times larger.
+
+- **What changed.** `extract_topographic_attributes` reported mean/std slope as `tan(slope) x 100` (percent) under the CAMELS key names `slope_mean` and `slope_std`. CAMELS uses m/km (Addor et al. 2017, HESS 21:5293, Table 1; the distributed `camels_topo.txt` column), which is `tan(slope) x 1000`, so the keys carried a different unit from CAMELS. They are now `tan(slope) x 1000`. The slope itself was already correct (EPSG:5070 grid, Horn kernel via `xrspatial.slope`); only the unit factor changed (`camels_attrs.topography.SLOPE_M_PER_KM_FACTOR = 1000.0`). Same defect class as the q5/q95 swap.
+- **Migration.** For anything computed with camels-attrs <= 2.0.1: `slope_mean_new = 10 x slope_mean_old`, same for `slope_std`. Datasets built with the earlier versions (for example a 671-gauge table) carry slope 10 times smaller than the CAMELS unit; rescale them, or re-extract, before comparing against CAMELS `slope_mean` or against aihydro-lsh. Code that treats the value as percent (thresholds, plots, `/100` conversions) must be updated. `create_comprehensive_watershed_map` now prints "m/km" instead of "%".
+- **Do not read this as CAMELS parity.** Even in m/km the 30 m 3DEP slope is 2.6-7.7 times CAMELS on the six panel gauges of the 2026-07 comparison (identical rank order). CAMELS takes slope from N15 ("USGS data"), whose DEM, resolution and method are not stated. Treat `slope_mean` as "CAMELS-like, different resolution", not as a validated reproduction of the CAMELS column. (The CHANGELOG's planned "validation against the original CAMELS dataset" has not been done for slope.)
+- **Tests.** `tests/test_topography_slope.py`: an analytic plane gives 1000 t within 3 % (nearest-neighbour reprojection) at 0, 35 and 47 N; the value equals 10 x the 2.0.1 computation on the same DEM; independence of source pixel size; the factor and the docstring state m/km. Offline (py3dep.get_dem replaced by a synthetic DEM).
+
 ### Added
 
 - `install-alone` CI workflow (AGU ecosystem audit C1, "independently usable"): builds the wheel, installs only it in a fresh venv outside

@@ -81,7 +81,7 @@ df.to_csv('batch_attributes.csv')
 
 | Category | Count | Examples |
 |----------|-------|----------|
-| **Topographic** | 7 | Elevation statistics, slope, drainage area |
+| **Topographic** | 7 | Elevation statistics, slope (m/km), drainage area |
 | **Climate** | 13 | Precipitation, temperature, aridity, seasonality, extremes |
 | **Soil** | 9 | Texture, depth, porosity, conductivity, water content |
 | **Vegetation** | 13 | LAI, NDVI/GVF, land cover fractions, root depth |
@@ -108,6 +108,8 @@ Lithology fractions (siliciclastic, carbonate, etc.), `geol_porosity`, `geol_per
 
 ### Hydrology
 `q_mean`, `runoff_ratio`, `baseflow_index`, `stream_elas`, `slope_fdc`, `slope_fdc_sawicz2011`, `flow_variability`, `high_q_freq`, `high_q_dur`, `low_q_freq`, `low_q_dur`, `zero_q_freq`, `hfd_mean`, `half_flow_date_std`
+
+**Slope units.** `slope_mean` and `slope_std` are `tan(slope) x 1000`, in m/km, the unit CAMELS uses (Addor et al. 2017, Table 1). Through 2.0.1 they were percent under the same keys (percent x 10 = m/km); see the CHANGELOG migration note. They are CAMELS-like, not CAMELS-identical: CAMELS takes slope from N15 ("USGS data"), whose DEM and method are not stated, and a 30 m 3DEP slope reads higher.
 
 **Definitions (2.0.0).** `slope_fdc` is the CAMELS attributes v2.0 file definition, `(Q66 - Q33) / (mean(q) * 0.33)` (non-exceedance type-7 quantiles, zero-flow days kept; reproduces the file to 1e-6). The log-space value that `slope_fdc` reported in 1.x is `slope_fdc_sawicz2011`. `baseflow_index` uses the Ladson et al. (2013) Lyne-Hollick recipe CAMELS applied (reproduces the file to 1e-5). `high_q_freq` and `low_q_freq` are days/yr; `zero_q_freq` is the fraction of days with q <= 0. `camels_attrs.hydrology.SIGNATURE_DEFINITIONS` carries the formula, quantile type, zero handling and source of each. Values from 1.x are not comparable for `slope_fdc` and `baseflow_index`; see the CHANGELOG.
 
